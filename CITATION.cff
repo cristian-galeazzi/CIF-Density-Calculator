@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "CIF Density Calculator: a validated Jupyter notebook for theoretical density calculation from CIF files"
+type: software
+authors:
+  - family-names: Galeazzi
+    given-names: Cristian
+version: 1.0.0
+date-released: 2026-07-30
+license: MIT
+keywords:
+  - crystallography
+  - CIF
+  - theoretical density
+  - X-ray density
+  - Rietveld
+  - pymatgen
+references:
+  - type: article
+    title: "Python Materials Genomics (pymatgen): A robust, open-source python library for materials analysis"
+    authors:
+      - family-names: Ong
+        given-names: Shyue Ping
+    journal: "Computational Materials Science"
+    volume: 68
+    start: 314
+    end: 319
+    year: 2013
+    doi: 10.1016/j.commatsci.2012.10.028

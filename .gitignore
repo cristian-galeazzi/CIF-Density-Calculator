@@ -1,0 +1,12 @@
+# Private input data and computed results: keep the folder, never its contents
+cif_files/*
+!cif_files/.gitkeep
+*.cif
+density_results.csv
+*.csv
+
+# Editor and Jupyter / Python artifacts
+.vscode/
+.ipynb_checkpoints/
+__pycache__/
+.pytest_cache/
