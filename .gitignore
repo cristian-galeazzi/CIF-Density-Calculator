@@ -2,11 +2,29 @@
 cif_files/*
 !cif_files/.gitkeep
 *.cif
-density_results.csv
 *.csv
 
 # Editor and Jupyter / Python artifacts
 .vscode/
 .ipynb_checkpoints/
 __pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+
+# Mac files 
+.DS_Store
+._*
+
+# Env/secrets and Virtual env
+.venv/
+venv/
+env/
+.env
+
+# Testing 
 .pytest_cache/
+.coverage
+htmlcov/
+
