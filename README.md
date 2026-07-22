@@ -114,6 +114,7 @@ processed. Accepted variations:
 | File extension | `.cif` and `.CIF`, matched case-insensitively on every OS |
 | Text encoding | UTF-8, with Latin-1 fallback |
 | Malformed / unreadable files | Listed in a separate error table; batch processing continues |
+| A phase that cannot be built | Reported in the error table as "only N of M phases": a dropped phase is never silent |
 
 ## Output
 
