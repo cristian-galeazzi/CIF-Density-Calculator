@@ -132,6 +132,11 @@ significant figures at output time only:
 | `Cell mass (g/mol)` | Total mass of the unit-cell content |
 | `Density (g/cm^3)` | Theoretical density |
 
+The table shown in the notebook is deliberately narrower than the CSV:
+`render_results` displays only source file, space group, cell volume and
+theoretical density, rounded for reading. The CSV always keeps all the
+columns above at full precision, so nothing is lost by the compact view.
+
 ## Method
 
 The theoretical density of a crystalline phase follows directly from the
@@ -150,14 +155,18 @@ rigorously.
 ## Validation and testing
 
 The validation suite [`test_cif_density.py`](test_cif_density.py)
-generates five synthetic test files at run time from published lattice
+generates six synthetic test files at run time from published lattice
 parameters - no experimental data is shipped or required - and runs the
 whole pipeline on them:
 
 ```bash
 pip install pytest
-pytest test_cif_density.py
+pytest
 ```
+
+Run `pytest` without a path: `pyproject.toml` sets `--doctest-modules`, so
+a bare run also executes the `>>>` examples in `cif_density.py`. Naming the
+test file explicitly skips them.
 
 | Case | Purpose |
 |------|---------|
@@ -165,6 +174,7 @@ pytest test_cif_density.py
 | Si (diamond, a = 5.43095 Å, P1 setting) | Explicit atom list without symmetry operators |
 | CeO₂ in a GSAS-II-style multi-block file | Filtering of non-structural data blocks |
 | CeO₂ with 12.5 % oxygen vacancies | Partial occupancies in the density |
+| Defect fluorite (La,Y)₂Zr₂O₇ | Several cations sharing one site at fractional occupancy |
 | A deliberately corrupt file | Error isolation (the batch must not stop) |
 
 Two independent tolerance levels are asserted:
