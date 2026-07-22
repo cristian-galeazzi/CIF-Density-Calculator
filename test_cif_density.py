@@ -163,7 +163,8 @@ def test_unparsable_phase_is_reported_not_dropped(tmp_path):
     results, errors = process_folder(tmp_path)
     assert len(results) == 1
     assert list(errors["File"]) == ["partial.cif"]
-    assert "1 of 2 phases" in errors["Error"].iloc[0]
+    assert "1 phase(s) skipped" in errors["Error"].iloc[0]
+    assert "section 2" in errors["Error"].iloc[0]
 
 
 def test_multiphase_rows_stay_distinguishable(tmp_path):

@@ -79,11 +79,16 @@ def select_structural_blocks(cif_text: str) -> str:
     return "\n".join(keep) if keep else cif_text
 
 
-def parse_cif_structures(path: Path) -> list[Structure]:
-    """Parse every crystal structure (phase) contained in a CIF file."""
+def parse_cif_structures(path: Path) -> tuple[list[Structure], list[str]]:
+    """Parse every phase of a CIF file, with the parser's own warnings.
+
+    The warnings are returned because pymatgen drops a block it cannot build
+    and only records ``No structure parsed for section N``; without them a
+    phase disappears from the batch silently.
+    """
     text = select_structural_blocks(read_cif_text(path))
     parser = CifParser.from_str(text)
-    return parser.parse_structures(primitive=False)
+    return parser.parse_structures(primitive=False), list(parser.warnings)
 
 
 def density_record(structure: Structure, label: str = "") -> dict:
@@ -132,19 +137,16 @@ def process_folder(input_dir, output_csv=None):
     records, failures = [], []
     for cif_file in cif_files:
         try:
-            structures = parse_cif_structures(cif_file)
+            structures, parser_notes = parse_cif_structures(cif_file)
             if not structures:
                 raise ValueError("no crystal structure found in file")
-            # pymatgen drops a phase it cannot build and only warns, so a
-            # multi-phase file can lose a row silently. Compare against the
-            # blocks that declare a cell and report the shortfall.
-            declared = len(re.findall(
-                r"(?m)^data_", select_structural_blocks(read_cif_text(cif_file))))
-            if len(structures) < declared:
+            # A phase pymatgen could not build must not vanish from the batch.
+            skipped = [n for n in parser_notes if "No structure parsed" in n]
+            if skipped:
                 failures.append({
                     "File": cif_file.name,
-                    "Error": f"only {len(structures)} of {declared} phases could "
-                             f"be parsed; the others were skipped by pymatgen",
+                    "Error": f"{len(skipped)} phase(s) skipped by pymatgen: "
+                             + "; ".join(n.splitlines()[0] for n in skipped),
                 })
             for i, structure in enumerate(structures):
                 label = (cif_file.name if len(structures) == 1
