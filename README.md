@@ -12,20 +12,21 @@ stopping the batch. Structure parsing and symmetry analysis are delegated
 to [pymatgen](https://pymatgen.org) and
 [spglib](https://spglib.readthedocs.io).
 
-**Scope.** The quantity computed here is the *theoretical* density, also
+**Scope.** What this tool computes is the *theoretical* density, also
 called *crystallographic density*, or *X-ray density* when the unit cell
 comes from a refinement against X-ray diffraction data: the mass of the
-refined unit cell divided by its volume. The calculation is arithmetic and
-knows nothing about the probe, so a cell refined from neutron data or
-relaxed by DFT is handled identically - which is why the IUCr core
-dictionary stores this quantity as `_exptl_crystal_density_diffrn` rather
-than under an X-ray-specific name. It is not a measured density, and this
-tool does not compute *relative* density (measured / theoretical) - that
-would require an experimental value, e.g. from Archimedes weighing, which
-is outside the scope of this repository.
+refined unit cell divided by its volume. The arithmetic does not know what
+produced the cell, so a structure refined from neutron data or relaxed by
+DFT is treated identically, which is why the IUCr core dictionary stores
+this quantity as `_exptl_crystal_density_diffrn` rather than under an
+X-ray-specific name. It is not a measured density, and this tool does not
+compute *relative* density (measured / theoretical): that would need an
+experimental value, e.g. from Archimedes weighing, which falls outside
+what this repository sets out to do.
 
 ## Contents
 
+- [Why this tool](#why-this-tool)
 - [Project layout](#project-layout)
 - [How to use](#how-to-use)
 - [Input format](#input-format)
@@ -37,6 +38,25 @@ is outside the scope of this repository.
 - [How to cite](#how-to-cite)
 - [AI assistance](#ai-assistance)
 - [License](#license)
+
+## Why this tool
+
+Theoretical density is a short calculation; what varies between
+implementations is how they treat a real refinement, not the formula.
+This one carries fractional site occupancies into the cell mass without
+approximation, because defective, doped and mixed-site structures demand
+it. It reads multi-block, multi-phase CIFs exactly as Rietveld software
+exports them, with no manual editing step where a number could quietly
+change. And it archives every phase at full precision. Every figure quoted
+in this README is reproducible with `pytest`, because the validation suite
+recomputes reference densities from IUPAC standard atomic weights
+independently of the libraries under test, asserting 10⁻⁸ internal
+self-consistency and 0.2 % accuracy. Nothing is uploaded: unpublished
+structures stay on your machine.
+
+It reports the cell exactly as refined: a wrong occupancy in the CIF
+becomes a wrong density, with no warning attached. The arithmetic is
+validated; the crystallography is still yours.
 
 ## Project layout
 
