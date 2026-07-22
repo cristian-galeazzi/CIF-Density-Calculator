@@ -54,9 +54,11 @@ independently of the libraries under test, asserting 10⁻⁸ internal
 self-consistency and 0.2 % accuracy. Nothing is uploaded: unpublished
 structures stay on your machine.
 
-It reports the cell exactly as refined: a wrong occupancy in the CIF
-becomes a wrong density, with no warning attached. The arithmetic is
-validated; the crystallography is still yours.
+No tool can check a refinement against reality; that would mean knowing the
+true structure already. A wrong occupancy in the CIF therefore becomes a
+wrong density, silently. One case is caught: an element declared in the CIF
+but never placed is reported, since that leaves the density too low. The
+arithmetic is validated; the crystallography remains yours.
 
 ## Project layout
 
@@ -88,16 +90,19 @@ results, errors = process_folder("cif_files", output_csv="density_results.csv")
 
 ### Running locally
 
-1. Install the dependencies and open the notebook:
+1. Install the dependencies:
 
    ```bash
    pip install -r requirements.txt
-   jupyter lab CIF_Density_Calculator.ipynb
    ```
 
-2. Copy your `.cif` files into the `cif_files/` folder (shipped empty with
+2. Open `CIF_Density_Calculator.ipynb` in any Jupyter host: VS Code and
+   PyCharm run `.ipynb` files directly, and `pip install jupyterlab` adds
+   JupyterLab if you prefer it. The notebook is only the interface, so you
+   can skip it entirely and import the engine from a plain script instead.
+3. Copy your `.cif` files into the `cif_files/` folder (shipped empty with
    the repository, and created automatically on first run if missing).
-3. Run all cells. Results are shown as a table and written to
+4. Run all cells. Results are shown as a table and written to
    `density_results.csv`.
 
 ### Running on Google Colab
