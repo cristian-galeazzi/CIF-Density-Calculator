@@ -47,8 +47,8 @@ This one carries fractional site occupancies into the cell mass without
 approximation, because defective, doped and mixed-site structures demand
 it. It reads multi-block, multi-phase CIFs exactly as Rietveld software
 exports them, with no manual editing step where a number could quietly
-change. And it archives every phase at full precision. Every figure quoted
-in this README is reproducible with `pytest`, because the validation suite
+change. And it rounds once, on the way out, never in between. Every figure
+quoted in this README is reproducible with `pytest`, because the suite
 recomputes reference densities from IUPAC standard atomic weights
 independently of the libraries under test, asserting 10⁻⁸ internal
 self-consistency and 0.2 % accuracy. Nothing is uploaded: unpublished
@@ -148,25 +148,40 @@ processed. Accepted variations:
 
 ## Output
 
-One row per phase in `density_results.csv`, values rounded to 6
-significant figures at output time only:
+One row per phase in `density_results.csv`. The theoretical density comes
+second, straight after the file name, because it is the result the file
+exists for; everything after it is context.
 
 | Column | Content |
 |--------|---------|
 | `File` | Source file name (multi-phase files carry the CIF section number, so the index still points at the right block when a section is skipped) |
+| `Density (g/cm^3)` | Theoretical density |
 | `Formula` | Reduced chemical formula |
+| `Cell composition` | Element amounts in the unit cell, unreduced |
 | `Space group` | International (Hermann-Mauguin) symbol |
+| `Space group number` | International number, unambiguous where the symbol depends on the setting |
+| `Crystal system` | cubic, tetragonal, monoclinic and so on |
 | `a (A)`, `b (A)`, `c (A)` | Lattice parameters (Å) |
 | `alpha (deg)`, `beta (deg)`, `gamma (deg)` | Lattice angles |
 | `Volume (A^3)` | Unit-cell volume |
 | `Z` | Formula units per cell |
+| `Sites per cell` | Crystallographic sites, not atoms: on a partially occupied structure the two differ, and the difference is the vacancy count |
 | `Cell mass (g/mol)` | Total mass of the unit-cell content |
-| `Density (g/cm^3)` | Theoretical density |
+| `Molar volume (cm^3/mol)` | Volume per formula unit |
 
-The table shown in the notebook is deliberately narrower than the CSV:
-`render_results` displays only source file, space group, cell volume and
-theoretical density, rounded for reading. The CSV always keeps all the
-columns above at full precision, so nothing is lost by the compact view.
+**Reduced formula or cell composition?** `Formula` is compact and familiar,
+but pymatgen picks its own normalisation for each phase, so a fluorite and
+a pyrochlore of the same material can print on different bases and look
+like different compounds. `Cell composition` is always the content of one
+unit cell, which keeps phases comparable. Both are given because neither
+is right for every question.
+
+Numbers are written at 6 significant figures. That is a property of the
+file, not of the calculation: no rounding happens anywhere in the pipeline
+until this point, and 6 figures is already far beyond what a refined
+lattice parameter supports. The table shown in the notebook is narrower
+still, since `render_results` displays only source file, space group, cell
+volume and theoretical density.
 
 ## Method
 

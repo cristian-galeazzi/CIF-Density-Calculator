@@ -22,6 +22,7 @@ if TYPE_CHECKING:  # IPython is a notebook-time dependency, not an import-time o
 import pandas as pd
 from pymatgen.core import Composition, Structure
 from pymatgen.io.cif import CifParser
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 __version__ = "1.0.0"
 
@@ -33,6 +34,7 @@ __all__ = [
     "select_structural_blocks",
     "parse_cif_structures",
     "phase_indices",
+    "symmetry_labels",
     "density_record",
     "process_folder",
     "render_results",
@@ -120,6 +122,28 @@ def phase_indices(n_built: int, skipped_notes: list[str]) -> list[int]:
     return [i for i in range(1, n_built + len(lost) + 1) if i not in lost]
 
 
+def symmetry_labels(structure: Structure) -> tuple[str, object, str]:
+    """Space-group symbol, international number and crystal system.
+
+    One symmetry analysis instead of the three that separate pymatgen
+    calls would run. Symmetry search fails on some refined structures, so
+    the whole triple degrades together rather than half-populating a row.
+
+    >>> from pymatgen.core import Lattice, Structure
+    >>> nacl = Structure(Lattice.cubic(5.6402), ["Na", "Cl"],
+    ...                  [[0, 0, 0], [0.5, 0.5, 0.5]])
+    >>> symmetry_labels(nacl)
+    ('Pm-3m', 221, 'cubic')
+    """
+    try:
+        sga = SpacegroupAnalyzer(structure)
+        return (sga.get_space_group_symbol(),
+                sga.get_space_group_number(),
+                sga.get_crystal_system())
+    except Exception:
+        return "N/A", "N/A", "N/A"
+
+
 def density_record(structure: Structure, label: str = "") -> dict:
     """Full-precision summary of one phase (no intermediate rounding)."""
     lattice = structure.lattice
@@ -128,15 +152,21 @@ def density_record(structure: Structure, label: str = "") -> dict:
     # noise in occupancies before deriving the *displayed* reduced formula;
     # the density itself always uses the raw composition.
     cleaned = Composition({el: round(n, 2) for el, n in comp.get_el_amt_dict().items()})
-    try:
-        space_group = structure.get_space_group_info()[0]
-    except Exception:
-        space_group = "N/A"
+    space_group, sg_number, crystal_system = symmetry_labels(structure)
     _, z_units = cleaned.get_reduced_composition_and_factor()
+    # Density leads the row: it is the result the file exists for, and the
+    # descriptive columns after it are context, not competing answers.
     return {
         "File": label,
+        "Density (g/cm^3)": structure.density,
         "Formula": cleaned.reduced_formula,
+        # Unreduced, so every phase is on the same "per unit cell" basis.
+        # reduced_formula renormalises per phase, which makes two phases of
+        # one material look like different compounds.
+        "Cell composition": cleaned.formula,
         "Space group": space_group,
+        "Space group number": sg_number,
+        "Crystal system": crystal_system,
         "a (A)": lattice.a,
         "b (A)": lattice.b,
         "c (A)": lattice.c,
@@ -145,8 +175,9 @@ def density_record(structure: Structure, label: str = "") -> dict:
         "gamma (deg)": lattice.gamma,
         "Volume (A^3)": structure.volume,
         "Z": z_units,
+        "Sites per cell": len(structure),
         "Cell mass (g/mol)": float(comp.weight),
-        "Density (g/cm^3)": structure.density,
+        "Molar volume (cm^3/mol)": structure.volume * ANGSTROM3_TO_CM3 * AVOGADRO / z_units,
     }
 
 

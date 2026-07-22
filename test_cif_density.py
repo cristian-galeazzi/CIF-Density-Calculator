@@ -15,6 +15,8 @@ exact cell content is known in advance. Two independent tolerance levels:
 
 Run with: pytest test_cif_density.py
 """
+import re
+
 import pytest
 
 from cif_density import (ANGSTROM3_TO_CM3, AVOGADRO, process_folder,
@@ -215,6 +217,61 @@ def test_multiphase_rows_stay_distinguishable(tmp_path):
     html = render_results(results).data
     assert "<td>two_phases.cif (phase 1)</td>" in html
     assert "<td>two_phases.cif (phase 2)</td>" in html
+
+
+EXPECTED_COLUMNS = [
+    "File", "Density (g/cm^3)", "Formula", "Cell composition",
+    "Space group", "Space group number", "Crystal system",
+    "a (A)", "b (A)", "c (A)", "alpha (deg)", "beta (deg)", "gamma (deg)",
+    "Volume (A^3)", "Z", "Sites per cell", "Cell mass (g/mol)",
+    "Molar volume (cm^3/mol)",
+]
+
+
+def test_column_layout(batch):
+    """The CSV schema is the archive format, so its order is part of it.
+
+    Density sits second on purpose: it is the result the file exists for.
+    """
+    results, _, _ = batch
+    assert list(results.columns) == EXPECTED_COLUMNS
+
+
+@pytest.mark.parametrize("fname", EXPECTED)
+def test_molar_volume_matches_cell_mass(batch, fname):
+    """V_m * rho must return the mass of one formula unit.
+
+    Independent of how V_m was derived: it ties the new column back to two
+    columns that are already validated, so a wrong Z or a unit slip in the
+    conversion cannot pass unnoticed.
+    """
+    results, _, _ = batch
+    r = row(results, fname)
+    assert r["Molar volume (cm^3/mol)"] * r["Density (g/cm^3)"] == pytest.approx(
+        r["Cell mass (g/mol)"] / r["Z"], rel=1e-8)
+
+
+FORMULA_TOKEN = re.compile(r"([A-Z][a-z]?)([0-9.]*)")
+
+
+def atom_count(formula: str) -> float:
+    """Total atoms in a formula string, with an omitted subscript as 1."""
+    return sum(float(n) if n else 1.0
+               for _, n in FORMULA_TOKEN.findall(formula))
+
+
+@pytest.mark.parametrize("fname", EXPECTED)
+def test_cell_composition_is_per_cell(batch, fname):
+    """Cell composition must be Z times the reduced formula, exactly.
+
+    reduced_formula renormalises per phase, so two phases of one material
+    can print on different bases and stop being comparable. This column is
+    the fixed "per unit cell" basis and must not follow that renormalisation.
+    """
+    results, _, _ = batch
+    r = row(results, fname)
+    assert atom_count(r["Cell composition"]) == pytest.approx(
+        atom_count(r["Formula"]) * r["Z"], rel=1e-6)
 
 
 @pytest.mark.parametrize("fname", EXPECTED)
