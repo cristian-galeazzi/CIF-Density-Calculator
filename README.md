@@ -1,19 +1,23 @@
 # CIF Density Calculator
 
-*Theoretical density from crystallographic CIF files - batch processing,
-built-in validation, cross-platform.*
-
-A single, self-contained Jupyter notebook that computes the theoretical
-density of every phase in a folder of CIF files and exports the results to
-CSV. It handles multi-block CIFs exported by Rietveld software (e.g.
-GSAS-II), multi-phase files, partial site occupancies (vacancies, dopants,
-mixed sites) and non-UTF-8 encodings, and isolates unreadable files without
-stopping the batch. Structure parsing and symmetry analysis are delegated
-to [pymatgen](https://pymatgen.org) and
-[spglib](https://spglib.readthedocs.io).
+A Python module and a companion Jupyter notebook that compute the
+theoretical density of every phase in a folder of CIF files and export the
+results to CSV. It handles multi-block CIFs exported by Rietveld software
+(e.g. GSAS-II), multi-phase files, partial site occupancies (vacancies,
+dopants, mixed sites) and non-UTF-8 encodings, and isolates unreadable
+files without stopping the batch. Fractional occupancies enter the cell
+mass without approximation, CIFs are read exactly as exported with no
+manual editing step where a number could quietly change, and rounding
+happens once, on the way out, never in between. Structure parsing and
+symmetry analysis are delegated to [pymatgen](https://pymatgen.org) and
+[spglib](https://spglib.readthedocs.io). Every figure quoted in this
+README is asserted by `pytest`, which recomputes reference densities from
+IUPAC standard atomic weights independently of the libraries under test:
+10⁻⁸ internal self-consistency, 0.2 % accuracy. Run locally, as intended,
+and nothing leaves your machine.
 
 **Scope.** What this tool computes is the *theoretical* density, also
-called *crystallographic density*, or *X-ray density* when the unit cell
+called *crystallographic* density, or *X-ray density* when the unit cell
 comes from a refinement against X-ray diffraction data: the mass of the
 refined unit cell divided by its volume. The arithmetic does not know what
 produced the cell, so a structure refined from neutron data or relaxed by
@@ -26,7 +30,7 @@ what this repository sets out to do.
 
 ## Contents
 
-- [Why this tool](#why-this-tool)
+- [Limitations](#limitations)
 - [Project layout](#project-layout)
 - [How to use](#how-to-use)
 - [Input format](#input-format)
@@ -39,20 +43,7 @@ what this repository sets out to do.
 - [AI assistance](#ai-assistance)
 - [License](#license)
 
-## Why this tool
-
-Theoretical density is a short calculation; what varies between
-implementations is how they treat a real refinement, not the formula.
-This one carries fractional site occupancies into the cell mass without
-approximation, because defective, doped and mixed-site structures demand
-it. It reads multi-block, multi-phase CIFs exactly as Rietveld software
-exports them, with no manual editing step where a number could quietly
-change. And it rounds once, on the way out, never in between. Every figure
-quoted in this README is asserted by `pytest`, because the suite
-recomputes reference densities from IUPAC standard atomic weights
-independently of the libraries under test, asserting 10⁻⁸ internal
-self-consistency and 0.2 % accuracy. Run locally, as intended, and nothing
-leaves your machine: unpublished structures are never uploaded anywhere.
+## Limitations
 
 No tool can check a refinement against reality; that would mean knowing the
 true structure already. A wrong occupancy in the CIF therefore becomes a
@@ -105,6 +96,13 @@ results, errors = process_folder("cif_files", output_csv="density_results.csv")
 4. Run all cells. Results are shown as a table and written to
    `density_results.csv`.
 
+The notebook has three cells: setup (installs any missing dependency and
+imports the engine), an optional quick self-check against one synthetic
+NaCl structure, and the batch run, which processes every CIF in
+`cif_files/` and writes the CSV. Two parameters control the run, both set
+in the last cell: `INPUT_FOLDER` (default `"cif_files"`) and `OUTPUT_CSV`
+(default `"density_results.csv"`).
+
 ### Running in VS Code
 
 VS Code opens `.ipynb` files natively and needs no extra setup beyond the
@@ -138,23 +136,6 @@ through the *Files* sidebar) and run all cells. The `cif_files` folder is
 created automatically; drag your CIF files into it and re-run the last
 cell.
 
-### Notebook structure
-
-| Section | Purpose |
-|---------|---------|
-| 1 - Setup | Installs missing dependencies; imports the engine from `cif_density.py` |
-| 2 - Quick self-check (optional) | End-to-end check on one synthetic NaCl structure |
-| 3 - Batch run | Processes every CIF in `cif_files/` and writes `density_results.csv` |
-
-### Configuration
-
-Both user-adjustable parameters live in the last code cell:
-
-| Parameter | Default | Meaning |
-|-----------|---------|---------|
-| `INPUT_FOLDER` | `"cif_files"` | Folder containing your `.cif` files |
-| `OUTPUT_CSV` | `"density_results.csv"` | Results table, written next to the notebook |
-
 ## Input format
 
 Standard crystallographic CIF files; any block that defines a unit cell is
@@ -186,8 +167,12 @@ exists for; everything after it is context.
 | `Space group` | International (Hermann-Mauguin) symbol |
 | `Space group number` | International number, unambiguous where the symbol depends on the setting |
 | `Crystal system` | cubic, tetragonal, monoclinic and so on |
-| `a (A)`, `b (A)`, `c (A)` | Lattice parameters (Å) |
-| `alpha (deg)`, `beta (deg)`, `gamma (deg)` | Lattice angles |
+| `a (A)` | Lattice parameter a (Å) |
+| `b (A)` | Lattice parameter b (Å) |
+| `c (A)` | Lattice parameter c (Å) |
+| `alpha (deg)` | Lattice angle alpha (°) |
+| `beta (deg)` | Lattice angle beta (°) |
+| `gamma (deg)` | Lattice angle gamma (°) |
 | `Volume (A^3)` | Unit-cell volume |
 | `Z` | Formula units per cell |
 | `Sites per cell` | Crystallographic sites, not atoms: on a partially occupied structure the two differ, and the difference is the vacancy count |
@@ -275,11 +260,11 @@ deliberate exception, and it never touches the density: element amounts
 are rounded to two decimals to absorb refinement noise before `Formula`
 and `Z` are derived from them, so a site refined at 0.9998 does not
 produce an absurd reduced formula. `Cell composition`, `Cell mass` and
-the density itself use the amounts exactly as parsed. The dominant sources of uncertainty
-in a computed density are therefore experimental, not computational:
-refined lattice parameters (typically known to 10⁻⁴-10⁻⁵ relative) and
-site occupancies limit the physically meaningful precision to far fewer
-digits than double-precision arithmetic provides.
+the density itself use the amounts exactly as parsed. The dominant sources
+of uncertainty in a computed density are therefore experimental, not
+computational: refined lattice parameters (typically known to
+10⁻⁴-10⁻⁵ relative) and site occupancies limit the physically meaningful
+precision to far fewer digits than double-precision arithmetic provides.
 
 One subtlety is made explicit rather than hidden: pymatgen converts atomic
 masses to grams through the CODATA value of the atomic mass constant,
