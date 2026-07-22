@@ -145,6 +145,27 @@ def test_csv_written(batch):
     assert len(out) == len(results) + 1  # header + one row per phase
 
 
+def test_unparsable_phase_is_reported_not_dropped(tmp_path):
+    """A phase pymatgen cannot build must surface in errors, not vanish.
+
+    The second block puts both sites on the same Fd-3m orbit, which pymatgen
+    rejects for exceeding the occupancy tolerance. It warns and returns one
+    structure instead of two, so without an explicit count the row would
+    disappear from the results with nothing to show for it.
+    """
+    two_blocks = (
+        CUBIC_CIF.format(name="good", a=NACL_A, spg="F m -3 m",
+                         sites="Na1 Na 0 0 0 1\nCl1 Cl 0.5 0.5 0.5 1")
+        + CUBIC_CIF.format(name="unbuildable", a=CEO2_A, spg="F d -3 m",
+                           sites="Ce1 Ce 0 0 0 1\nO1 O 0.25 0.25 0.25 1"))
+    (tmp_path / "partial.cif").write_text(two_blocks)
+
+    results, errors = process_folder(tmp_path)
+    assert len(results) == 1
+    assert list(errors["File"]) == ["partial.cif"]
+    assert "1 of 2 phases" in errors["Error"].iloc[0]
+
+
 def test_multiphase_rows_stay_distinguishable(tmp_path):
     """Two phases of one file must not collapse into identical display rows.
 

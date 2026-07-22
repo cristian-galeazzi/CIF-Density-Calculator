@@ -135,6 +135,17 @@ def process_folder(input_dir, output_csv=None):
             structures = parse_cif_structures(cif_file)
             if not structures:
                 raise ValueError("no crystal structure found in file")
+            # pymatgen drops a phase it cannot build and only warns, so a
+            # multi-phase file can lose a row silently. Compare against the
+            # blocks that declare a cell and report the shortfall.
+            declared = len(re.findall(
+                r"(?m)^data_", select_structural_blocks(read_cif_text(cif_file))))
+            if len(structures) < declared:
+                failures.append({
+                    "File": cif_file.name,
+                    "Error": f"only {len(structures)} of {declared} phases could "
+                             f"be parsed; the others were skipped by pymatgen",
+                })
             for i, structure in enumerate(structures):
                 label = (cif_file.name if len(structures) == 1
                          else PHASE_LABEL.format(name=cif_file.name, index=i + 1))
@@ -190,11 +201,11 @@ def render_results(results: pd.DataFrame, caption: str = "") -> "HTML":
         return HTML("<em>No phases to display.</em>")
     html = (
         results[["File", "Space group", "Volume (A^3)", "Density (g/cm^3)"]]
-        .rename(columns={"Volume (A^3)": "Volume (Å³)",
-                         "Density (g/cm^3)": "Density (g/cm³)"})
+        .rename(columns={"Volume (A^3)": "Cell volume (Å³)",
+                         "Density (g/cm^3)": "Theoretical density (g/cm³)"})
         .to_html(index=False, border=0, classes="cif-density", justify="left",
-                 formatters={"Volume (Å³)": "{:.2f}".format,
-                             "Density (g/cm³)": "{:.4f}".format})
+                 formatters={"Cell volume (Å³)": "{:.2f}".format,
+                             "Theoretical density (g/cm³)": "{:.4f}".format})
     )
     if caption:
         # Escaped by hand and placed before <thead>: to_html escapes cell
