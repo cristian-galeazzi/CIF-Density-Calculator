@@ -1,4 +1,4 @@
-"""Theoretical (X-ray) density from crystallographic CIF files.
+"""Theoretical density from crystallographic CIF files.
 
 Engine behind ``CIF_Density_Calculator.ipynb``: CIF reading, structural
 block filtering and density calculation, with batch processing over a

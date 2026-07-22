@@ -1,7 +1,7 @@
 # CIF Density Calculator
 
-*Theoretical (X-ray) density from crystallographic CIF files - batch
-processing, built-in validation, cross-platform.*
+*Theoretical density from crystallographic CIF files - batch processing,
+built-in validation, cross-platform.*
 
 A single, self-contained Jupyter notebook that computes the theoretical
 density of every phase in a folder of CIF files and exports the results to
@@ -13,11 +13,16 @@ to [pymatgen](https://pymatgen.org) and
 [spglib](https://spglib.readthedocs.io).
 
 **Scope.** The quantity computed here is the *theoretical* density, also
-called X-ray or crystallographic density: the mass of the refined unit
-cell divided by its volume. It is not a measured density, and this tool
-does not compute *relative* density (measured / theoretical) - that would
-require an experimental value, e.g. from Archimedes weighing, which is
-outside the scope of this repository.
+called *crystallographic density*, or *X-ray density* when the unit cell
+comes from a refinement against X-ray diffraction data: the mass of the
+refined unit cell divided by its volume. The calculation is arithmetic and
+knows nothing about the probe, so a cell refined from neutron data or
+relaxed by DFT is handled identically - which is why the IUCr core
+dictionary stores this quantity as `_exptl_crystal_density_diffrn` rather
+than under an X-ray-specific name. It is not a measured density, and this
+tool does not compute *relative* density (measured / theoretical) - that
+would require an experimental value, e.g. from Archimedes weighing, which
+is outside the scope of this repository.
 
 ## Contents
 
