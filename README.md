@@ -72,10 +72,10 @@ results, errors = process_folder("cif_files", output_csv="density_results.csv")
 
 ### Requirements
 
-- Python ≥ 3.10. [`requirements.txt`](requirements.txt) pins `pymatgen`
+- Python ≥ 3.11. [`requirements.txt`](requirements.txt) pins `pymatgen`
   and `pandas` for the calculation, `ipython` for the notebook table, and
   `pytest` for the validation suite.
-- Tested on Python 3.14 with pymatgen 2026.7.16 and pandas 3.0.3.
+- Tested on Python 3.11 and 3.14, with pymatgen 2026.5.4 and pandas 3.0.3.
 - On Google Colab no installation is needed: the first cell installs any
   missing dependency automatically.
 

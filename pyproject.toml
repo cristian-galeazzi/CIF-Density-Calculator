@@ -5,3 +5,11 @@ addopts = "--doctest-modules"
 filterwarnings = [
     "ignore::DeprecationWarning:spglib.spg",
 ]
+[tool.ruff]
+target-version = "py311"   # the floor requirements.txt can actually install
+
+[tool.ruff.lint.per-file-ignores]
+# The notebook imports the engine only after the bootstrap cell has run, so
+# that a missing pymatgen can still be installed. Hoisting those imports to
+# the top of the cell would break the Colab path.
+"CIF_Density_Calculator.ipynb" = ["E402"]
