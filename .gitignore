@@ -4,6 +4,9 @@ cif_files/*
 *.cif
 *.csv
 
+# Local agent notes: useful while working, not part of the published record
+CLAUDE.md
+
 # Editor and Jupyter / Python artifacts
 .vscode/
 .ipynb_checkpoints/

@@ -47,8 +47,9 @@ warnings.filterwarnings("ignore", message=".*stoichiometry.*")
 warnings.filterwarnings("ignore", message=".*No _symmetry_equiv_pos_as_xyz.*")
 # "Missing elements ..." is deliberately NOT silenced. On a single-block CIF it
 # means pymatgen failed to place a declared element, which makes the density
-# too low. On multi-block files it is spurious (see CLAUDE.md), but silencing
-# it here would hide the real case too.
+# too low. On a multi-block file it is spurious, because pymatgen validates
+# every parsed structure against the file's *first* block; silencing it here
+# would hide the real case along with the harmless one.
 
 AVOGADRO = 6.02214076e23   # mol^-1, exact (SI, 2019)
 ANGSTROM3_TO_CM3 = 1e-24
