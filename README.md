@@ -51,8 +51,8 @@ change. And it rounds once, on the way out, never in between. Every figure
 quoted in this README is asserted by `pytest`, because the suite
 recomputes reference densities from IUPAC standard atomic weights
 independently of the libraries under test, asserting 10⁻⁸ internal
-self-consistency and 0.2 % accuracy. Nothing is uploaded: unpublished
-structures stay on your machine.
+self-consistency and 0.2 % accuracy. Run locally, as intended, and nothing
+leaves your machine: unpublished structures are never uploaded anywhere.
 
 No tool can check a refinement against reality; that would mean knowing the
 true structure already. A wrong occupancy in the CIF therefore becomes a
@@ -105,13 +105,38 @@ results, errors = process_folder("cif_files", output_csv="density_results.csv")
 4. Run all cells. Results are shown as a table and written to
    `density_results.csv`.
 
+### Running in VS Code
+
+VS Code opens `.ipynb` files natively and needs no extra setup beyond the
+Python and Jupyter extensions. Two things are worth knowing.
+
+Select the interpreter where you installed the requirements, through
+*Select Kernel* at the top right of the notebook. Running the notebook
+against a different interpreter is the usual reason `pymatgen` appears not
+to be installed when it is; the first cell will then reinstall it into
+whichever environment it landed in.
+
+Keep `cif_density.py` next to the notebook. The engine is imported, not
+embedded, so the notebook alone does nothing.
+
 ### Running on Google Colab
 
-Upload **both** `CIF_Density_Calculator.ipynb` and `cif_density.py` to
-[Colab](https://colab.research.google.com/) (the notebook goes through
-*File → Upload notebook*, the module through the *Files* sidebar) and run
-all cells: the `cif_files` folder is created automatically. Drag your CIF
-files into it from the Files sidebar and re-run the last cell.
+**Colab means uploading your structures to Google.** Every CIF you drag
+into the Files sidebar leaves your machine and is processed on someone
+else's infrastructure. For unpublished refinements that is often exactly
+what you are not allowed to do, whether because of an embargo, a group
+policy or an agreement with a collaborator. Check before you upload, not
+after. Nothing in this repository can undo it for you.
+
+Colab is a reasonable place to try the tool on published or synthetic
+structures, and a poor place to process your own unpublished ones. Running
+locally costs one `pip install` and keeps the files where they are.
+
+If that is settled: upload **both** `CIF_Density_Calculator.ipynb` and
+`cif_density.py` (the notebook through *File → Upload notebook*, the module
+through the *Files* sidebar) and run all cells. The `cif_files` folder is
+created automatically; drag your CIF files into it and re-run the last
+cell.
 
 ### Notebook structure
 
