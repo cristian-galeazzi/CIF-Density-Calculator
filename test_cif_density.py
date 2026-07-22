@@ -165,6 +165,31 @@ def test_unparsable_phase_is_reported_not_dropped(tmp_path):
     assert list(errors["File"]) == ["partial.cif"]
     assert "1 phase(s) skipped" in errors["Error"].iloc[0]
     assert "section 2" in errors["Error"].iloc[0]
+    # The file holds two sections, so the survivor keeps its index: dropping
+    # the suffix here would claim the file was single-phase.
+    assert list(results["File"]) == ["partial.cif (phase 1)"]
+
+
+def test_phase_index_survives_a_skipped_section(tmp_path):
+    """The phase index must be the CIF section number, not a running count.
+
+    pymatgen returns only the sections it could build, so enumerating that
+    list renumbers everything after a skipped section: here the third block
+    would be labelled "phase 2" and point at the wrong part of the file.
+    """
+    three_blocks = (
+        CUBIC_CIF.format(name="good_first", a=NACL_A, spg="F m -3 m",
+                         sites="Na1 Na 0 0 0 1\nCl1 Cl 0.5 0.5 0.5 1")
+        + CUBIC_CIF.format(name="unbuildable", a=CEO2_A, spg="F d -3 m",
+                           sites="Ce1 Ce 0 0 0 1\nO1 O 0.25 0.25 0.25 1")
+        + CUBIC_CIF.format(name="good_third", a=SI_A, spg="P 1", sites=SI_SITES))
+    (tmp_path / "middle_gap.cif").write_text(three_blocks)
+
+    results, errors = process_folder(tmp_path)
+    assert list(results["File"]) == ["middle_gap.cif (phase 1)",
+                                     "middle_gap.cif (phase 3)"]
+    assert list(results["Formula"]) == ["NaCl", "Si"]
+    assert "section 2" in errors["Error"].iloc[0]
 
 
 def test_multiphase_rows_stay_distinguishable(tmp_path):

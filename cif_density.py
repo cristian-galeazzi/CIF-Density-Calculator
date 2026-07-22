@@ -32,6 +32,7 @@ __all__ = [
     "read_cif_text",
     "select_structural_blocks",
     "parse_cif_structures",
+    "phase_indices",
     "density_record",
     "process_folder",
     "render_results",
@@ -55,6 +56,10 @@ CSV_FLOAT_FORMAT = "%.6g"  # rounding happens only at output time
 # keeps that string intact rather than parsing it back out: two phases of one
 # file can share a space group, so the index is what makes the rows distinct.
 PHASE_LABEL = "{name} (phase {index})"
+
+# pymatgen reports a section it could not build as "No structure parsed for
+# section N in CIF."; N is 1-based over the blocks it was given.
+SKIPPED_SECTION = re.compile(r"No structure parsed for section (\d+)")
 
 
 def read_cif_text(path: Path) -> str:
@@ -91,6 +96,30 @@ def parse_cif_structures(path: Path) -> tuple[list[Structure], list[str]]:
     return parser.parse_structures(primitive=False), list(parser.warnings)
 
 
+def phase_indices(n_built: int, skipped_notes: list[str]) -> list[int]:
+    """Section number of each structure pymatgen managed to build.
+
+    A structure's position in the parsed list is not its section number:
+    pymatgen drops the sections it cannot build, so every skipped one shifts
+    all the following indices down. The lost section numbers are in the
+    parser warnings, so the survivors are what is left of ``1..N``.
+
+    Falls back to a plain ``1..n_built`` if a warning cannot be read, which
+    is no worse than assuming nothing was skipped.
+
+    >>> phase_indices(3, [])
+    [1, 2, 3]
+    >>> phase_indices(2, ["No structure parsed for section 2 in CIF."])
+    [1, 3]
+    >>> phase_indices(2, ["some warning in an unexpected format"])
+    [1, 2]
+    """
+    lost = {int(n) for note in skipped_notes for n in SKIPPED_SECTION.findall(note)}
+    if len(lost) != len(skipped_notes):
+        return list(range(1, n_built + 1))
+    return [i for i in range(1, n_built + len(lost) + 1) if i not in lost]
+
+
 def density_record(structure: Structure, label: str = "") -> dict:
     """Full-precision summary of one phase (no intermediate rounding)."""
     lattice = structure.lattice
@@ -121,13 +150,17 @@ def density_record(structure: Structure, label: str = "") -> dict:
     }
 
 
-def process_folder(input_dir, output_csv=None):
+def process_folder(input_dir, output_csv=None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Compute the density of every phase in every CIF file of a folder.
 
     Returns (results, errors) as two DataFrames. Files that cannot be
     parsed are reported in `errors` and never interrupt the batch. The
     extension match is case-insensitive (.cif/.CIF) on every OS without
     producing duplicates.
+
+    The phase index in the File value is the CIF section number, so it stays
+    correct when pymatgen skips a section, and it is written whenever the
+    file holds more than one section, even if only one of them was built.
     """
     input_dir = Path(input_dir)
     cif_files = sorted(
@@ -148,9 +181,11 @@ def process_folder(input_dir, output_csv=None):
                     "Error": f"{len(skipped)} phase(s) skipped by pymatgen: "
                              + "; ".join(n.splitlines()[0] for n in skipped),
                 })
-            for i, structure in enumerate(structures):
-                label = (cif_file.name if len(structures) == 1
-                         else PHASE_LABEL.format(name=cif_file.name, index=i + 1))
+            single_phase = len(structures) + len(skipped) == 1
+            for index, structure in zip(phase_indices(len(structures), skipped),
+                                        structures):
+                label = (cif_file.name if single_phase
+                         else PHASE_LABEL.format(name=cif_file.name, index=index))
                 records.append(density_record(structure, label))
         except Exception as exc:
             failures.append({"File": cif_file.name, "Error": str(exc)})
