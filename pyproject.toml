@@ -1,4 +1,7 @@
 [tool.pytest.ini_options]
+# --doctest-modules runs the >>> examples in cif_density.py as real tests,
+# so they cannot rot unnoticed.
+addopts = "--doctest-modules"
 filterwarnings = [
     "ignore::DeprecationWarning:spglib.spg",
 ]
