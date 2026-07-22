@@ -12,7 +12,12 @@ from __future__ import annotations
 
 import re
 import warnings
+from html import escape
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # IPython is a notebook-time dependency, not an import-time one
+    from IPython.display import HTML
 
 import pandas as pd
 from pymatgen.core import Composition, Structure
@@ -37,10 +42,19 @@ __all__ = [
 warnings.filterwarnings("ignore", message=".*Issues encountered while parsing CIF.*")
 warnings.filterwarnings("ignore", message=".*stoichiometry.*")
 warnings.filterwarnings("ignore", message=".*No _symmetry_equiv_pos_as_xyz.*")
+# "Missing elements ..." is deliberately NOT silenced. On a single-block CIF it
+# means pymatgen failed to place a declared element, which makes the density
+# too low. On multi-block files it is spurious (see CLAUDE.md), but silencing
+# it here would hide the real case too.
 
 AVOGADRO = 6.02214076e23   # mol^-1, exact (SI, 2019)
 ANGSTROM3_TO_CM3 = 1e-24
 CSV_FLOAT_FORMAT = "%.6g"  # rounding happens only at output time
+
+# Multi-phase files carry the phase index inside the File value. The display
+# keeps that string intact rather than parsing it back out: two phases of one
+# file can share a space group, so the index is what makes the rows distinct.
+PHASE_LABEL = "{name} (phase {index})"
 
 
 def read_cif_text(path: Path) -> str:
@@ -123,7 +137,7 @@ def process_folder(input_dir, output_csv=None):
                 raise ValueError("no crystal structure found in file")
             for i, structure in enumerate(structures):
                 label = (cif_file.name if len(structures) == 1
-                         else f"{cif_file.name} (phase {i + 1})")
+                         else PHASE_LABEL.format(name=cif_file.name, index=i + 1))
                 records.append(density_record(structure, label))
         except Exception as exc:
             failures.append({"File": cif_file.name, "Error": str(exc)})
@@ -143,37 +157,39 @@ _CSS = """<style>
                   border-bottom: 2px solid rgba(128,128,128,.55); white-space: nowrap; }
 .cif-density td { padding: 6px 18px 6px 0; border-bottom: 1px solid rgba(128,128,128,.22); }
 .cif-density tr:last-child td { border-bottom: none; }
-.cif-density th:nth-child(n+2), .cif-density td:nth-child(n+2) { text-align: right; }
+.cif-density th:nth-child(n+3), .cif-density td:nth-child(n+3) { text-align: right; }
 .cif-density caption { caption-side: bottom; text-align: left; padding-top: 8px;
                        font-size: .85em; opacity: .65; }
 </style>"""
 
 
-def render_results(results: pd.DataFrame, caption: str = ""):
-    """Notebook table: file, phase, cell volume, theoretical density.
+def render_results(results: pd.DataFrame, caption: str = "") -> "HTML":
+    """Notebook table: file, space group, cell volume, theoretical density.
 
     Display only, so the CSV keeps its full ``CSV_FLOAT_FORMAT`` precision.
-    The phase index is split back out of the file name, where
-    ``process_folder`` packs it for multi-phase files only.
+    The file name keeps the ``(phase N)`` suffix that ``process_folder``
+    appends for multi-phase files: two phases of one file can share a space
+    group, so the index is what keeps the rows distinguishable.
+
+    Requires IPython, which every Jupyter/Colab kernel provides; importing
+    ``cif_density`` from a plain script does not need it.
 
     >>> df = pd.DataFrame({"File": ["a.cif (phase 2)", "b.cif"],
+    ...                    "Space group": ["Fd-3m", "Fm-3m"],
     ...                    "Volume (A^3)": [143.8778, 177.5],
     ...                    "Density (g/cm^3)": [6.678707, 2.186912]})
     >>> html = render_results(df).data
     >>> "<td>6.6787</td>" in html and "<td>177.50</td>" in html
     True
-    >>> "<td>2</td>" in html and "<td>-</td>" in html
+    >>> "<td>Fd-3m</td>" in html and "<td>a.cif (phase 2)</td>" in html
     True
     """
     from IPython.display import HTML  # notebook-only; keeps pytest import light
 
     if results.empty:
         return HTML("<em>No phases to display.</em>")
-    table = results.copy()
-    table["Phase"] = table["File"].str.extract(r"\(phase (\d+)\)$")[0].fillna("-")
-    table["File"] = table["File"].str.replace(r" \(phase \d+\)$", "", regex=True)
     html = (
-        table[["File", "Phase", "Volume (A^3)", "Density (g/cm^3)"]]
+        results[["File", "Space group", "Volume (A^3)", "Density (g/cm^3)"]]
         .rename(columns={"Volume (A^3)": "Volume (Å³)",
                          "Density (g/cm^3)": "Density (g/cm³)"})
         .to_html(index=False, border=0, classes="cif-density", justify="left",
@@ -181,6 +197,9 @@ def render_results(results: pd.DataFrame, caption: str = ""):
                              "Density (g/cm³)": "{:.4f}".format})
     )
     if caption:
-        html = html.replace("<tbody>", f"<caption>{caption}</caption><tbody>", 1)
+        # Escaped by hand and placed before <thead>: to_html escapes cell
+        # values but not this, and the HTML spec wants caption first.
+        html = html.replace(
+            "<thead>", f"<caption>{escape(caption)}</caption><thead>", 1)
     return HTML(_CSS + html)
 

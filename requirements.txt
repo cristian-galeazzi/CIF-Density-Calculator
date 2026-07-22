@@ -3,3 +3,7 @@ pandas>=2.0
 
 # Testing (validation suite only)
 pytest>=8.0
+
+# Notebook display only (render_results). Every Jupyter/Colab kernel
+# already provides it; not needed to import cif_density from a script.
+ipython>=8.0
