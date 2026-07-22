@@ -12,6 +12,13 @@ stopping the batch. Structure parsing and symmetry analysis are delegated
 to [pymatgen](https://pymatgen.org) and
 [spglib](https://spglib.readthedocs.io).
 
+**Scope.** The quantity computed here is the *theoretical* density, also
+called X-ray or crystallographic density: the mass of the refined unit
+cell divided by its volume. It is not a measured density, and this tool
+does not compute *relative* density (measured / theoretical) - that would
+require an experimental value, e.g. from Archimedes weighing, which is
+outside the scope of this repository.
+
 ## Contents
 
 - [Project layout](#project-layout)
@@ -23,6 +30,7 @@ to [pymatgen](https://pymatgen.org) and
 - [Numerical precision](#numerical-precision)
 - [Privacy: nothing private gets published](#privacy-nothing-private-gets-published)
 - [How to cite](#how-to-cite)
+- [AI assistance](#ai-assistance)
 - [License](#license)
 
 ## Project layout
@@ -245,6 +253,14 @@ Reference data used by the validation section:
   atomic weights of the elements 2021*
 - BIPM, *The International System of Units (SI)*, 9th edition (2019) -
   exact value of the Avogadro constant
+
+## AI assistance
+
+This software was developed with the assistance of Claude (Anthropic):
+the initial version with Claude Fable, later revisions with Claude Opus.
+Every change was supervised and reviewed by the author, who remains
+solely responsible for the method, the validation suite and any result
+published using this software.
 
 ## License
 
