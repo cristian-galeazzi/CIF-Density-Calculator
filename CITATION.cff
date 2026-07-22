@@ -5,6 +5,16 @@ type: software
 authors:
   - family-names: Galeazzi
     given-names: Cristian
+    orcid: "https://orcid.org/0009-0006-7150-2659"
+    affiliation: "Center for Materials Research (ZfM/LaMa), Justus Liebig University Giessen, Germany"
+abstract: >-
+  Computes the theoretical (crystallographic) density of every phase in a
+  folder of CIF files and exports the results to CSV. Handles multi-block
+  Rietveld exports, multi-phase files and partial site occupancies
+  (vacancies, dopants, mixed sites), and isolates unreadable files without
+  stopping the batch. Densities are validated against reference values
+  computed independently from IUPAC standard atomic weights.
+repository-code: "https://github.com/cristian-galeazzi/CIF-Density-Calculator"
 version: 1.0.0
 date-released: 2026-07-30
 license: MIT
@@ -13,6 +23,9 @@ keywords:
   - CIF
   - theoretical density
   - X-ray density
+  - crystallographic density
+  - unit cell
+  - site occupancy
   - Rietveld
   - pymatgen
 references:
