@@ -29,6 +29,7 @@ __all__ = [
     "parse_cif_structures",
     "density_record",
     "process_folder",
+    "render_results",
 ]
 
 # CIFs from Rietveld software trigger benign parser warnings; keep output
@@ -131,3 +132,55 @@ def process_folder(input_dir, output_csv=None):
     if output_csv is not None and not results.empty:
         results.to_csv(output_csv, index=False, float_format=CSV_FLOAT_FORMAT)
     return results, errors
+
+
+# Display-side only. Headers carry real typographic units (the CSV keeps the
+# ASCII ones); tabular-nums lines the digits up; the grey borders are given
+# as rgba so the table reads on both light and dark notebook themes.
+_CSS = """<style>
+.cif-density { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.cif-density th { text-align: left; font-weight: 600; padding: 7px 18px 7px 0;
+                  border-bottom: 2px solid rgba(128,128,128,.55); white-space: nowrap; }
+.cif-density td { padding: 6px 18px 6px 0; border-bottom: 1px solid rgba(128,128,128,.22); }
+.cif-density tr:last-child td { border-bottom: none; }
+.cif-density th:nth-child(n+2), .cif-density td:nth-child(n+2) { text-align: right; }
+.cif-density caption { caption-side: bottom; text-align: left; padding-top: 8px;
+                       font-size: .85em; opacity: .65; }
+</style>"""
+
+
+def render_results(results: pd.DataFrame, caption: str = ""):
+    """Notebook table: file, phase, cell volume, theoretical density.
+
+    Display only, so the CSV keeps its full ``CSV_FLOAT_FORMAT`` precision.
+    The phase index is split back out of the file name, where
+    ``process_folder`` packs it for multi-phase files only.
+
+    >>> df = pd.DataFrame({"File": ["a.cif (phase 2)", "b.cif"],
+    ...                    "Volume (A^3)": [143.8778, 177.5],
+    ...                    "Density (g/cm^3)": [6.678707, 2.186912]})
+    >>> html = render_results(df).data
+    >>> "<td>6.6787</td>" in html and "<td>177.50</td>" in html
+    True
+    >>> "<td>2</td>" in html and "<td>-</td>" in html
+    True
+    """
+    from IPython.display import HTML  # notebook-only; keeps pytest import light
+
+    if results.empty:
+        return HTML("<em>No phases to display.</em>")
+    table = results.copy()
+    table["Phase"] = table["File"].str.extract(r"\(phase (\d+)\)$")[0].fillna("-")
+    table["File"] = table["File"].str.replace(r" \(phase \d+\)$", "", regex=True)
+    html = (
+        table[["File", "Phase", "Volume (A^3)", "Density (g/cm^3)"]]
+        .rename(columns={"Volume (A^3)": "Volume (Å³)",
+                         "Density (g/cm^3)": "Density (g/cm³)"})
+        .to_html(index=False, border=0, classes="cif-density", justify="left",
+                 formatters={"Volume (Å³)": "{:.2f}".format,
+                             "Density (g/cm³)": "{:.4f}".format})
+    )
+    if caption:
+        html = html.replace("<tbody>", f"<caption>{caption}</caption><tbody>", 1)
+    return HTML(_CSS + html)
+
