@@ -82,7 +82,7 @@ results, errors = process_folder("cif_files", output_csv="density_results.csv")
 - Python ≥ 3.10 with `pymatgen` and `pandas`
   (see [`requirements.txt`](requirements.txt)); `pytest` is needed only to
   run the validation suite.
-- Tested on Python 3.13 with pymatgen 2025.10.7.
+- Tested on Python 3.14 with pymatgen 2026.7.16 and pandas 3.0.3.
 - On Google Colab no installation is needed: the first cell installs any
   missing dependency automatically.
 
