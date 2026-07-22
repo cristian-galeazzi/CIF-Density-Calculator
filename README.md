@@ -1,158 +1,76 @@
 # CIF Density Calculator
 
-A Python module and a companion Jupyter notebook that compute the
-theoretical density of every phase in a folder of CIF files and export the
-results to CSV. It handles multi-block CIFs exported by Rietveld software
-(e.g. GSAS-II), multi-phase files, partial site occupancies (vacancies,
-dopants, mixed sites) and non-UTF-8 encodings, and isolates unreadable
-files without stopping the batch. Fractional occupancies enter the cell
-mass without approximation, CIFs are read exactly as exported with no
-manual editing step where a number could quietly change, and rounding
-happens once, on the way out, never in between. Structure parsing and
-symmetry analysis are delegated to [pymatgen](https://pymatgen.org) and
-[spglib](https://spglib.readthedocs.io). Every figure quoted in this
-README is asserted by `pytest`, which recomputes reference densities from
-IUPAC standard atomic weights independently of the libraries under test:
-10⁻⁸ internal self-consistency, 0.2 % accuracy. Run locally, as intended,
-and nothing leaves your machine.
+Give it a folder of CIF files, the standard output of a crystal-structure
+refinement, and it returns the theoretical density of every phase inside
+them, as a table you can read and a CSV you can reuse. It runs as a
+Jupyter notebook, so no programming experience is needed: open it, drop
+your files in a folder, press run.
 
-**Scope.** What this tool computes is the *theoretical* density, also
-called *crystallographic* density, or *X-ray density* when the unit cell
-comes from a refinement against X-ray diffraction data: the mass of the
-refined unit cell divided by its volume. The arithmetic does not know what
-produced the cell, so a structure refined from neutron data or relaxed by
-DFT is treated identically, which is why the IUCr core dictionary stores
-this quantity as `_exptl_crystal_density_diffrn` rather than under an
-X-ray-specific name. It is not a measured density, and this tool does not
-compute *relative* density (measured / theoretical): that would need an
-experimental value, e.g. from Archimedes weighing, which falls outside
-what this repository sets out to do.
+## Quick start
 
-## Contents
+No terminal required. If Python and a notebook editor are already set up,
+start at step 3.
 
-- [Limitations](#limitations)
-- [Project layout](#project-layout)
-- [How to use](#how-to-use)
-- [Input format](#input-format)
-- [Output](#output)
-- [Method](#method)
-- [Validation and testing](#validation-and-testing)
-- [Numerical precision](#numerical-precision)
-- [Privacy: nothing private gets published](#privacy-nothing-private-gets-published)
-- [How to cite](#how-to-cite)
-- [AI assistance](#ai-assistance)
-- [License](#license)
+1. **Install Python** (version 3.11 or newer). On Windows, download the
+   installer from [python.org](https://www.python.org/downloads/) and tick
+   **Add python.exe to PATH** on the first screen; that checkbox is easy
+   to miss and everything else assumes it. macOS and Linux usually ship a
+   suitable Python already.
 
-## Limitations
+2. **Install a notebook editor.** [VS Code](https://code.visualstudio.com/)
+   is free, works the same on Windows, macOS and Linux, and needs its
+   Python and Jupyter extensions, which it offers to install the first
+   time you open a notebook.
 
-No tool can check a refinement against reality; that would mean knowing the
-true structure already. A wrong occupancy in the CIF therefore becomes a
-wrong density, silently. One case is caught: an element declared in the CIF
-but never placed is reported, since that leaves the density too low. The
-arithmetic is validated; the crystallography remains yours.
+3. **Download this repository**: the green *Code* button above, then
+   *Download ZIP*, then unzip it somewhere you can find again.
 
-## Project layout
+4. **Open `CIF_Density_Calculator.ipynb`** in VS Code, put your `.cif`
+   files in the `cif_files/` folder next to it, and press *Run All*.
 
-The calculation engine is a plain Python module, importable from scripts
-and other notebooks; the notebook is only the user interface.
+The first cell installs pymatgen and pandas if they are missing, so there
+is nothing to install by hand. Results appear as a table under the last
+cell and are written to `density_results.csv` in the same folder, which
+opens in Excel or any spreadsheet.
 
-| File | Role |
-|------|------|
-| [`cif_density.py`](cif_density.py) | Calculation engine: CIF reading, block filtering, density calculation, batch driver |
-| [`CIF_Density_Calculator.ipynb`](CIF_Density_Calculator.ipynb) | User interface: dependency bootstrap, quick self-check, batch run |
-| [`test_cif_density.py`](test_cif_density.py) | Validation suite (`pytest`), synthetic data only |
+If you would rather use a terminal, `pip install -r requirements.txt`
+installs everything in one step and the notebook opens in any Jupyter
+host. Tested on Python 3.11 and 3.14, with pymatgen 2026.5.4 and pandas
+3.0.3.
 
-```python
-from cif_density import process_folder
+The notebook has three cells: setup, an optional self-check against one
+synthetic NaCl structure, and the batch run, which processes every CIF in
+`cif_files/` and writes the CSV. `INPUT_FOLDER` and `OUTPUT_CSV`, set in
+the last cell, default to `"cif_files"` and `"density_results.csv"`.
 
-results, errors = process_folder("cif_files", output_csv="density_results.csv")
-```
+### Working in VS Code
 
-## How to use
+*Select Kernel*, at the top right of the notebook, chooses which Python
+runs it. If a package looks missing even though it installed a moment
+ago, the notebook is almost always running on a different Python than the
+one that received it; pick the other kernel and run again.
 
-### Requirements
+Keep `cif_density.py` in the same folder as the notebook. The notebook
+imports the calculation from it rather than containing it, so on its own
+it does nothing. Downloading the ZIP keeps them together.
 
-- Python ≥ 3.11. [`requirements.txt`](requirements.txt) pins `pymatgen`
-  and `pandas` for the calculation, `ipython` for the notebook table, and
-  `pytest` for the validation suite.
-- Tested on Python 3.11 and 3.14, with pymatgen 2026.5.4 and pandas 3.0.3.
-- On Google Colab no installation is needed: the first cell installs any
-  missing dependency automatically.
+### Working in Google Colab
 
-### Running locally
-
-1. Install the dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. Open `CIF_Density_Calculator.ipynb` in any Jupyter host: VS Code and
-   PyCharm run `.ipynb` files directly, and `pip install jupyterlab` adds
-   JupyterLab if you prefer it. The notebook is only the interface, so you
-   can skip it entirely and import the engine from a plain script instead.
-3. Copy your `.cif` files into the `cif_files/` folder (shipped empty with
-   the repository, and created automatically on first run if missing).
-4. Run all cells. Results are shown as a table and written to
-   `density_results.csv`.
-
-The notebook has three cells: setup (installs any missing dependency and
-imports the engine), an optional quick self-check against one synthetic
-NaCl structure, and the batch run, which processes every CIF in
-`cif_files/` and writes the CSV. Two parameters control the run, both set
-in the last cell: `INPUT_FOLDER` (default `"cif_files"`) and `OUTPUT_CSV`
-(default `"density_results.csv"`).
-
-### Running in VS Code
-
-VS Code opens `.ipynb` files natively and needs no extra setup beyond the
-Python and Jupyter extensions. Two things are worth knowing.
-
-Select the interpreter where you installed the requirements, through
-*Select Kernel* at the top right of the notebook. Running the notebook
-against a different interpreter is the usual reason `pymatgen` appears not
-to be installed when it is; the first cell will then reinstall it into
-whichever environment it landed in.
-
-Keep `cif_density.py` next to the notebook. The engine is imported, not
-embedded, so the notebook alone does nothing.
-
-### Running on Google Colab
-
-**Colab means uploading your structures to Google.** Every CIF you drag
+**Colab means uploading your structures to Google.** Every CIF dragged
 into the Files sidebar leaves your machine and is processed on someone
-else's infrastructure. For unpublished refinements that is often exactly
-what you are not allowed to do, whether because of an embargo, a group
-policy or an agreement with a collaborator. Check before you upload, not
-after. Nothing in this repository can undo it for you.
-
-Colab is a reasonable place to try the tool on published or synthetic
-structures, and a poor place to process your own unpublished ones. Running
-locally costs one `pip install` and keeps the files where they are.
+else's infrastructure, which an embargo, a group policy or a collaboration
+agreement may not allow. Check before you upload, not after. Colab suits
+published or synthetic structures; for your own unpublished ones, run
+locally instead, it costs one `pip install` and keeps the files where they
+are.
 
 If that is settled: upload **both** `CIF_Density_Calculator.ipynb` and
-`cif_density.py` (the notebook through *File → Upload notebook*, the module
-through the *Files* sidebar) and run all cells. The `cif_files` folder is
-created automatically; drag your CIF files into it and re-run the last
-cell.
+`cif_density.py` (the notebook through *File → Upload notebook*, the
+module through the *Files* sidebar) and run all cells. The `cif_files`
+folder is created automatically; drag your CIF files into it and re-run
+the last cell.
 
-## Input format
-
-Standard crystallographic CIF files; any block that defines a unit cell is
-processed. Accepted variations:
-
-| Feature | Behavior |
-|---------|----------|
-| Multi-block CIFs (Rietveld exports, e.g. GSAS-II) | Non-structural blocks (publication metadata, diffractogram data) are filtered out automatically |
-| Multi-phase files | One result row per phase |
-| Partial site occupancies | Vacancies, dopants and mixed sites enter the density rigorously |
-| Symmetry | Both space-group symbols (sites expanded by symmetry) and explicit P1 atom lists are accepted |
-| File extension | `.cif` and `.CIF`, matched case-insensitively on every OS |
-| Text encoding | UTF-8, with Latin-1 fallback |
-| Malformed / unreadable files | Listed in a separate error table; batch processing continues |
-| A phase that cannot be built | Reported in the error table as "N phase(s) skipped by pymatgen", with the block number: a dropped phase is never silent |
-
-## Output
+## What you get
 
 One row per phase in `density_results.csv`. The theoretical density comes
 second, straight after the file name, because it is the result the file
@@ -186,44 +104,82 @@ like different compounds. `Cell composition` is always the content of one
 unit cell, which keeps phases comparable. Both are given because neither
 is right for every question.
 
-Numbers are written at 6 significant figures. That is a property of the
-file, not of the calculation: no rounding happens anywhere in the pipeline
-until this point, and 6 figures is already far beyond what a refined
-lattice parameter supports. The table shown in the notebook is narrower
-still, since `render_results` displays only source file, space group, cell
-volume and theoretical density.
+Numbers are written at 6 significant figures, a property of the file, not
+of the calculation: nothing is rounded before this point, and 6 figures is
+already beyond what a refined lattice parameter supports. The notebook
+table is narrower still, showing only file, space group, cell volume and
+density.
 
-## Method
+## What it accepts
 
-The theoretical density of a crystalline phase follows directly from the
-refined unit-cell content:
+Standard crystallographic CIF files; any block that defines a unit cell is
+processed. Accepted variations:
+
+| Feature | Behavior |
+|---------|----------|
+| Multi-block CIFs (Rietveld exports, e.g. GSAS-II) | Non-structural blocks (publication metadata, diffractogram data) are filtered out automatically |
+| Multi-phase files | One result row per phase |
+| Partial site occupancies | Vacancies, dopants and mixed sites enter the density rigorously |
+| Symmetry | Both space-group symbols (sites expanded by symmetry) and explicit P1 atom lists are accepted |
+| File extension | `.cif` and `.CIF`, matched case-insensitively on every OS |
+| Text encoding | UTF-8, with Latin-1 fallback |
+| Malformed / unreadable files | Listed in a separate error table; batch processing continues |
+| A phase that cannot be built | Reported in the error table as "N phase(s) skipped by pymatgen", with the block number: a dropped phase is never silent |
+
+## Limitations
+
+What this tool computes is the *theoretical* density, also called
+*crystallographic* density, or *X-ray density* when the unit cell comes
+from a refinement against X-ray diffraction data: the mass of the refined
+unit cell divided by its volume. The arithmetic does not know what
+produced the cell, so a structure refined from neutron data or relaxed by
+DFT is treated identically, which is why the IUCr core dictionary stores
+this quantity as `_exptl_crystal_density_diffrn` rather than under an
+X-ray-specific name. It is not a measured density, and this tool does not
+compute *relative* density (measured / theoretical): that would need an
+experimental value, e.g. from Archimedes weighing, which falls outside
+what this repository sets out to do.
+
+No tool can check a refinement against reality; that would mean knowing
+the true structure already. A wrong occupancy in the CIF therefore becomes
+a wrong density, silently. One case is caught: an element declared in the
+CIF but never placed is reported, since that leaves the density too low.
+The arithmetic is validated; the crystallography remains yours.
+
+## How it works and how it was checked
+
+Density follows from the refined unit cell:
 
 $$\rho = \frac{m_\text{cell}}{V_\text{cell}} = \frac{\sum_i o_i\, M_i}{N_A \cdot V_\text{cell}}$$
 
-where the sum runs over all atomic sites $i$ in the unit cell, $o_i$ is
-the site occupancy, $M_i$ the standard atomic weight (g mol⁻¹),
+$o_i$ is the site occupancy, $M_i$ the standard atomic weight (g mol⁻¹),
 $V_\text{cell}$ the unit-cell volume and
 $N_A = 6.022\,140\,76 \times 10^{23}\ \text{mol}^{-1}$ the Avogadro
-constant (exact by definition since the 2019 revision of the SI). Partial
-site occupancies (vacancies, dopants, mixed sites) are therefore included
-rigorously.
+constant (exact since the 2019 SI revision). Partial occupancies
+(vacancies, dopants, mixed sites) are included rigorously.
 
-## Validation and testing
+Everything runs in double precision (machine epsilon ≈ 2.2 × 10⁻¹⁶),
+unrounded until the CSV is written at 6 significant figures. One
+exception never touches the density: element amounts are rounded to two
+decimals before `Formula` and `Z` are derived, so a site at 0.9998 does
+not produce an absurd formula; `Cell composition`, `Cell mass` and the
+density itself keep the raw amounts. A second, smaller effect: pymatgen
+converts atomic mass to grams via the CODATA atomic mass constant, while
+the formula above divides by the exact Avogadro constant. Since the 2019
+SI redefinition these are no longer identical, differing by about
+1.05 × 10⁻⁹ relative with the CODATA 2022 value, a figure that follows
+CODATA revisions and is worth recomputing rather than quoting.
 
-The validation suite [`test_cif_density.py`](test_cif_density.py)
-generates six synthetic test files at run time, no experimental data is
-shipped or required, and runs the whole pipeline on them. Lattice
-parameters are published values except for the mixed-site fluorite, whose
-cell and occupancies are chosen so that the exact cell content is known in
-advance:
+[`test_cif_density.py`](test_cif_density.py) generates six synthetic test
+files at run time and runs the whole pipeline on them:
 
 ```bash
 pytest
 ```
 
-Run `pytest` without a path: `pyproject.toml` sets `--doctest-modules`, so
-a bare run also executes the `>>>` examples in `cif_density.py`. Naming the
-test file explicitly skips them.
+Run it without a path: `pyproject.toml`'s `--doctest-modules` also runs
+the `>>>` examples in `cif_density.py`; naming the file explicitly skips
+them.
 
 | Case | Purpose |
 |------|---------|
@@ -234,49 +190,21 @@ test file explicitly skips them.
 | Defect fluorite (La,Y)₂Zr₂O₇ | Several cations sharing one site at fractional occupancy |
 | A deliberately corrupt file | Error isolation (the batch must not stop) |
 
-Two independent tolerance levels are asserted:
+Two tolerances are checked: internal self-consistency (< 10⁻⁸ relative,
+density must equal ρ = m_cell / (N_A · V) recomputed from the reported
+mass and volume; the ~10⁻⁹ residual is the CODATA correction above plus
+floating-point rounding < 10⁻¹⁵), and accuracy (< 0.2 % relative, against
+densities hand-calculated from IUPAC standard atomic weights, independent
+of pymatgen). The notebook also carries a self-check (one NaCl structure)
+for environments without pytest, e.g. Colab, raising `AssertionError` on
+failure so a headless run cannot pass silently.
 
-1. **Internal self-consistency** (< 10⁻⁸ relative): the reported density
-   must equal ρ = m_cell / (N_A · V) recomputed from the reported cell
-   mass and volume (see [Numerical precision](#numerical-precision) for
-   the origin of the residual ~10⁻⁹ deviation).
-2. **Accuracy** (< 0.2 % relative): agreement with densities
-   hand-calculated from IUPAC standard atomic weights, fully independently
-   of pymatgen.
+## Project layout
 
-The suite is a standard pytest module, so it can run in any CI pipeline.
-Section 2 of the notebook additionally provides a quick self-check (one
-synthetic NaCl structure compared against its hand-calculated density) for
-environments without pytest, e.g. Google Colab; it raises
-`AssertionError` on failure, so a headless run
-(`jupyter nbconvert --execute`) cannot pass silently either.
-
-## Numerical precision
-
-All calculations are carried out in IEEE-754 double precision (relative
-machine epsilon ≈ 2.2 × 10⁻¹⁶). Nothing on the path to the density is
-rounded before the file is written (6 significant figures). There is one
-deliberate exception, and it never touches the density: element amounts
-are rounded to two decimals to absorb refinement noise before `Formula`
-and `Z` are derived from them, so a site refined at 0.9998 does not
-produce an absurd reduced formula. `Cell composition`, `Cell mass` and
-the density itself use the amounts exactly as parsed. The dominant sources
-of uncertainty in a computed density are therefore experimental, not
-computational: refined lattice parameters (typically known to
-10⁻⁴-10⁻⁵ relative) and site occupancies limit the physically meaningful
-precision to far fewer digits than double-precision arithmetic provides.
-
-One subtlety is made explicit rather than hidden: pymatgen converts atomic
-masses to grams through the CODATA value of the atomic mass constant,
-whereas the textbook formula above divides by the exact Avogadro constant.
-Since the 2019 SI redefinition these two routes are no longer identical by
-definition; they differ by the molar-mass-constant correction, which with
-the CODATA 2022 value of the atomic mass constant is about 1.05 × 10⁻⁹
-relative. That figure follows the CODATA revisions and has moved before,
-so it is worth recomputing rather than quoting. The self-consistency
-tolerance of 10⁻⁸ covers it with an order of magnitude to spare, together
-with floating-point rounding (< 10⁻¹⁵): both are negligible against
-experimental uncertainty, but quantified instead of assumed.
+`cif_density.py` is the calculation engine, importable from scripts and
+other notebooks. `CIF_Density_Calculator.ipynb` is only the user
+interface. `test_cif_density.py` is the validation suite, run with
+`pytest`, synthetic data only.
 
 ## Privacy: nothing private gets published
 
@@ -285,8 +213,7 @@ must ever be committed or published. Three layers enforce this:
 
 1. **Ignored paths** - `cif_files/`, `*.cif`, `density_results.csv` and
    `*.csv` are excluded via [`.gitignore`](.gitignore); the validation
-   suite and the notebook self-check use only synthetic structures
-   generated in temporary directories.
+   suite and the notebook self-check use only synthetic structures.
 2. **Stripped notebook outputs** - executed cells embed their results
    (tables, file names) inside the `.ipynb` file. Strip them before every
    commit:
@@ -296,9 +223,9 @@ must ever be committed or published. Three layers enforce this:
    ```
 
 3. **Automatic strip on commit (recommended)** - install
-   [nbstripout](https://github.com/kynan/nbstripout) once per clone and
-   git will strip outputs transparently at commit time, so a forgotten
-   manual strip can never leak data:
+   [nbstripout](https://github.com/kynan/nbstripout) once per clone so git
+   strips outputs transparently at commit time, and a forgotten manual
+   strip can never leak data:
 
    ```bash
    pip install nbstripout
