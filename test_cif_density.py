@@ -13,7 +13,7 @@ exact cell content is known in advance. Two independent tolerance levels:
 2. accuracy (< 0.2 % relative): agreement with densities hand-calculated
    from IUPAC standard atomic weights, fully independently of pymatgen.
 
-Run with: pytest test_cif_density.py
+Run with a bare `pytest`: naming this file skips the doctests
 """
 import re
 
@@ -82,13 +82,13 @@ FLUORITE_SITES = ("La1 La 0 0 0 0.25\n"
 FLUORITE_MASS = (IUPAC_MASS["La"] + IUPAC_MASS["Y"]
                  + 2 * IUPAC_MASS["Zr"] + 7 * IUPAC_MASS["O"])
 
-# (file name) -> (independent reference density, expected reduced formula)
+# (file name) -> independent reference density, from IUPAC weights only
 EXPECTED = {
-    "NaCl.cif": (cubic_density(4 * (IUPAC_MASS["Na"] + IUPAC_MASS["Cl"]), NACL_A), "NaCl"),
-    "Si.cif": (cubic_density(8 * IUPAC_MASS["Si"], SI_A), "Si"),
-    "CeO2_multiblock.cif": (cubic_density(4 * (IUPAC_MASS["Ce"] + 2 * IUPAC_MASS["O"]), CEO2_A), "CeO2"),
-    "CeO2_vacancies.cif": (cubic_density(4 * (IUPAC_MASS["Ce"] + 2 * 0.875 * IUPAC_MASS["O"]), CEO2_A), "Ce4O7"),
-    "fluorite_mixed_site.cif": (cubic_density(FLUORITE_MASS, FLUORITE_A), "LaYZr2O7"),
+    "NaCl.cif": cubic_density(4 * (IUPAC_MASS["Na"] + IUPAC_MASS["Cl"]), NACL_A),
+    "Si.cif": cubic_density(8 * IUPAC_MASS["Si"], SI_A),
+    "CeO2_multiblock.cif": cubic_density(4 * (IUPAC_MASS["Ce"] + 2 * IUPAC_MASS["O"]), CEO2_A),
+    "CeO2_vacancies.cif": cubic_density(4 * (IUPAC_MASS["Ce"] + 2 * 0.875 * IUPAC_MASS["O"]), CEO2_A),
+    "fluorite_mixed_site.cif": cubic_density(FLUORITE_MASS, FLUORITE_A),
 }
 
 
@@ -191,7 +191,7 @@ def test_phase_index_survives_a_skipped_section(tmp_path):
     results, errors = process_folder(tmp_path)
     assert list(results["File"]) == ["middle_gap.cif (phase 1)",
                                      "middle_gap.cif (phase 3)"]
-    assert list(results["Formula"]) == ["NaCl", "Si"]
+    assert list(results["Cell composition"]) == ["Na4 Cl4", "Si8"]
     assert "section 2" in errors["Error"].iloc[0]
 
 
@@ -221,7 +221,7 @@ def test_multiphase_rows_stay_distinguishable(tmp_path):
 
 
 EXPECTED_COLUMNS = [
-    "File", "Density (g/cm^3)", "Formula", "Cell composition",
+    "File", "Density (g/cm^3)", "Cell composition",
     "Space group", "Space group number", "Crystal system",
     "a (A)", "b (A)", "c (A)", "alpha (deg)", "beta (deg)", "gamma (deg)",
     "Volume (A^3)", "Z", "Sites per cell", "Cell mass (g/mol)",
@@ -308,17 +308,19 @@ def atom_count(formula: str) -> float:
 
 
 @pytest.mark.parametrize("fname", EXPECTED)
-def test_cell_composition_is_per_cell(batch, fname):
-    """Cell composition must be Z times the reduced formula, exactly.
+def test_cell_composition_accounts_for_the_cell_mass(batch, fname):
+    """Weighing the reported composition must reproduce the reported mass.
 
-    reduced_formula renormalises per phase, so two phases of one material
-    can print on different bases and stop being comparable. This column is
-    the fixed "per unit cell" basis and must not follow that renormalisation.
+    This is the check that a reduced formula could not survive: it ties the
+    only composition column to the mass that feeds the density, using IUPAC
+    weights independent of pymatgen. An element dropped by rounding, or an
+    amount on the wrong basis, shows up here as a mass mismatch.
     """
     results, _, _ = batch
     r = row(results, fname)
-    assert atom_count(r["Cell composition"]) == pytest.approx(
-        atom_count(r["Formula"]) * r["Z"], rel=1e-6)
+    weighed = sum(IUPAC_MASS[el] * (float(n) if n else 1.0)
+                  for el, n in FORMULA_TOKEN.findall(r["Cell composition"]))
+    assert weighed == pytest.approx(r["Cell mass (g/mol)"], rel=2e-3)
 
 
 @pytest.mark.parametrize("fname", EXPECTED)
@@ -332,12 +334,5 @@ def test_internal_self_consistency(batch, fname):
 @pytest.mark.parametrize("fname", EXPECTED)
 def test_density_vs_independent_reference(batch, fname):
     results, _, _ = batch
-    rho_ref, _ = EXPECTED[fname]
-    assert row(results, fname)["Density (g/cm^3)"] == pytest.approx(rho_ref, rel=2e-3)
-
-
-@pytest.mark.parametrize("fname", EXPECTED)
-def test_reduced_formula(batch, fname):
-    results, _, _ = batch
-    _, formula_ref = EXPECTED[fname]
-    assert row(results, fname)["Formula"] == formula_ref
+    assert row(results, fname)["Density (g/cm^3)"] == pytest.approx(
+        EXPECTED[fname], rel=2e-3)

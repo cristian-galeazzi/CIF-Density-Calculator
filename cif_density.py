@@ -149,9 +149,9 @@ def density_record(structure: Structure, label: str = "") -> dict:
     """Full-precision summary of one phase (no intermediate rounding)."""
     lattice = structure.lattice
     comp = structure.composition
-    # Element amounts are rounded (2 decimals) only to absorb refinement
-    # noise in occupancies before deriving the *displayed* reduced formula;
-    # the density itself always uses the raw composition.
+    # Rounded to 2 decimals only so that Z comes out as a sensible integer:
+    # a site refined at 0.9998 would otherwise give an absurd formula unit.
+    # This value never reaches a reported composition, mass or density.
     cleaned = Composition({el: round(n, 2) for el, n in comp.get_el_amt_dict().items()})
     space_group, sg_number, crystal_system = symmetry_labels(structure)
     _, z_units = cleaned.get_reduced_composition_and_factor()
@@ -163,13 +163,12 @@ def density_record(structure: Structure, label: str = "") -> dict:
     return {
         "File": label,
         "Density (g/cm^3)": structure.density,
-        "Formula": cleaned.reduced_formula,
-        # Raw composition, not `cleaned`: rounding to 2 decimals deletes a
-        # trace dopant entirely (Gd at 0.001 per site vanishes) while its
-        # mass stays in the density, so the two columns would disagree.
-        # Unreduced, so every phase is on the same "per unit cell" basis:
-        # reduced_formula renormalises per phase, which makes two phases of
-        # one material look like different compounds.
+        # The only composition reported, and it is the raw one. A reduced
+        # formula was dropped before release: it came from rounded amounts, so
+        # it printed a Ce0.999/Gd0.001 refinement as "CeO2" while the missing
+        # dopant stayed in the mass. Unreduced also keeps every phase on the
+        # same per-cell basis, where a reduced formula renormalises per phase
+        # and makes two polymorphs look like different compounds.
         "Cell composition": comp.formula,
         "Space group": space_group,
         "Space group number": sg_number,

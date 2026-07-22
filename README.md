@@ -80,7 +80,6 @@ exists for; everything after it is context.
 |--------|---------|
 | `File` | Source file name (multi-phase files carry the structural-block index, so it still points at the right block when one is skipped) |
 | `Density (g/cm^3)` | Theoretical density |
-| `Formula` | Reduced chemical formula |
 | `Cell composition` | Element amounts in the unit cell, unreduced |
 | `Space group` | International (Hermann-Mauguin) symbol |
 | `Space group number` | International number, unambiguous where the symbol depends on the setting |
@@ -97,12 +96,15 @@ exists for; everything after it is context.
 | `Cell mass (g/mol)` | Total mass of the unit-cell content |
 | `Molar volume (cm^3/mol)` | Volume per formula unit |
 
-**Reduced formula or cell composition?** `Formula` is compact and familiar,
-but pymatgen picks its own normalisation for each phase, so two polymorphs
-of the same material can print on different bases and look like different
-compounds. `Cell composition` is always the content of one
-unit cell, which keeps phases comparable. Both are given because neither
-is right for every question.
+**Why the composition is not reduced.** A reduced formula is compact, and
+earlier versions reported one, but it has two failings that matter here.
+It is normalised per phase, so two polymorphs of the same material print
+on different bases and look like different compounds. Worse, it has to be
+built from rounded occupancies to stay readable, and rounding deletes a
+trace dopant: a refinement with Ce at 0.999 and Gd at 0.001 came out as
+`CeO2`, with the gadolinium still in the mass and the density. The
+unreduced cell composition reports `Ce3.996 Gd0.004 O8` and cannot hide
+anything the mass contains.
 
 Numbers are written at 6 significant figures, a property of the file, not
 of the calculation: nothing is rounded before this point, and 6 figures is
@@ -161,7 +163,7 @@ constant (exact since the 2019 SI revision). Partial occupancies
 Everything runs in double precision (machine epsilon ≈ 2.2 × 10⁻¹⁶),
 unrounded until the CSV is written at 6 significant figures. One
 exception never touches the density: element amounts are rounded to two
-decimals before `Formula` and `Z` are derived, so a site at 0.9998 does
+decimals before `Z` is derived, so a site refined at 0.9998 does
 not produce an absurd formula; `Cell composition`, `Cell mass` and the
 density itself keep the raw amounts. A second, smaller effect: pymatgen
 converts atomic mass to grams via the CODATA atomic mass constant, while
