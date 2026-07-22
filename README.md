@@ -98,9 +98,9 @@ exists for; everything after it is context.
 | `Molar volume (cm^3/mol)` | Volume per formula unit |
 
 **Reduced formula or cell composition?** `Formula` is compact and familiar,
-but pymatgen picks its own normalisation for each phase, so a fluorite and
-a pyrochlore of the same material can print on different bases and look
-like different compounds. `Cell composition` is always the content of one
+but pymatgen picks its own normalisation for each phase, so two polymorphs
+of the same material can print on different bases and look like different
+compounds. `Cell composition` is always the content of one
 unit cell, which keeps phases comparable. Both are given because neither
 is right for every question.
 
@@ -187,7 +187,7 @@ them.
 | Si (diamond, a = 5.43095 Å, P1 setting) | Explicit atom list without symmetry operators |
 | CeO₂ in a GSAS-II-style multi-block file | Filtering of non-structural data blocks |
 | CeO₂ with 12.5 % oxygen vacancies | Partial occupancies in the density |
-| Defect fluorite (La,Y)₂Zr₂O₇ | Several cations sharing one site at fractional occupancy |
+| A cubic oxide with three cations on one site | Occupancies summed per element across a shared site |
 | A deliberately corrupt file | Error isolation (the batch must not stop) |
 
 Two tolerances are checked: internal self-consistency (< 10⁻⁸ relative,
