@@ -48,7 +48,7 @@ approximation, because defective, doped and mixed-site structures demand
 it. It reads multi-block, multi-phase CIFs exactly as Rietveld software
 exports them, with no manual editing step where a number could quietly
 change. And it rounds once, on the way out, never in between. Every figure
-quoted in this README is reproducible with `pytest`, because the suite
+quoted in this README is asserted by `pytest`, because the suite
 recomputes reference densities from IUPAC standard atomic weights
 independently of the libraries under test, asserting 10⁻⁸ internal
 self-consistency and 0.2 % accuracy. Nothing is uploaded: unpublished
@@ -81,9 +81,9 @@ results, errors = process_folder("cif_files", output_csv="density_results.csv")
 
 ### Requirements
 
-- Python ≥ 3.10 with `pymatgen` and `pandas`
-  (see [`requirements.txt`](requirements.txt)); `pytest` is needed only to
-  run the validation suite.
+- Python ≥ 3.10. [`requirements.txt`](requirements.txt) pins `pymatgen`
+  and `pandas` for the calculation, `ipython` for the notebook table, and
+  `pytest` for the validation suite.
 - Tested on Python 3.14 with pymatgen 2026.7.16 and pandas 3.0.3.
 - On Google Colab no installation is needed: the first cell installs any
   missing dependency automatically.
@@ -144,7 +144,7 @@ processed. Accepted variations:
 | File extension | `.cif` and `.CIF`, matched case-insensitively on every OS |
 | Text encoding | UTF-8, with Latin-1 fallback |
 | Malformed / unreadable files | Listed in a separate error table; batch processing continues |
-| A phase that cannot be built | Reported in the error table as "N phase(s) skipped by pymatgen", with the CIF section number: a dropped phase is never silent |
+| A phase that cannot be built | Reported in the error table as "N phase(s) skipped by pymatgen", with the block number: a dropped phase is never silent |
 
 ## Output
 
@@ -154,7 +154,7 @@ exists for; everything after it is context.
 
 | Column | Content |
 |--------|---------|
-| `File` | Source file name (multi-phase files carry the CIF section number, so the index still points at the right block when a section is skipped) |
+| `File` | Source file name (multi-phase files carry the structural-block index, so it still points at the right block when one is skipped) |
 | `Density (g/cm^3)` | Theoretical density |
 | `Formula` | Reduced chemical formula |
 | `Cell composition` | Element amounts in the unit cell, unreduced |
@@ -201,12 +201,13 @@ rigorously.
 ## Validation and testing
 
 The validation suite [`test_cif_density.py`](test_cif_density.py)
-generates six synthetic test files at run time from published lattice
-parameters - no experimental data is shipped or required - and runs the
-whole pipeline on them:
+generates six synthetic test files at run time, no experimental data is
+shipped or required, and runs the whole pipeline on them. Lattice
+parameters are published values except for the mixed-site fluorite, whose
+cell and occupancies are chosen so that the exact cell content is known in
+advance:
 
 ```bash
-pip install pytest
 pytest
 ```
 
@@ -243,9 +244,13 @@ environments without pytest, e.g. Google Colab; it raises
 ## Numerical precision
 
 All calculations are carried out in IEEE-754 double precision (relative
-machine epsilon ≈ 2.2 × 10⁻¹⁶). No intermediate rounding is performed
-anywhere in the pipeline; values are rounded only when written to the
-output table (6 significant figures). The dominant sources of uncertainty
+machine epsilon ≈ 2.2 × 10⁻¹⁶). Nothing on the path to the density is
+rounded before the file is written (6 significant figures). There is one
+deliberate exception, and it never touches the density: element amounts
+are rounded to two decimals to absorb refinement noise before `Formula`
+and `Z` are derived from them, so a site refined at 0.9998 does not
+produce an absurd reduced formula. `Cell composition`, `Cell mass` and
+the density itself use the amounts exactly as parsed. The dominant sources of uncertainty
 in a computed density are therefore experimental, not computational:
 refined lattice parameters (typically known to 10⁻⁴-10⁻⁵ relative) and
 site occupancies limit the physically meaningful precision to far fewer
@@ -255,11 +260,13 @@ One subtlety is made explicit rather than hidden: pymatgen converts atomic
 masses to grams through the CODATA value of the atomic mass constant,
 whereas the textbook formula above divides by the exact Avogadro constant.
 Since the 2019 SI redefinition these two routes are no longer identical by
-definition; they differ by the molar-mass-constant correction, about
-3 × 10⁻¹⁰ relative. The self-consistency tolerance of 10⁻⁸ covers this
-constant difference plus floating-point rounding (< 10⁻¹⁵) - both utterly
-negligible against experimental uncertainty, but quantified instead of
-assumed.
+definition; they differ by the molar-mass-constant correction, which with
+the CODATA 2022 value of the atomic mass constant is about 1.05 × 10⁻⁹
+relative. That figure follows the CODATA revisions and has moved before,
+so it is worth recomputing rather than quoting. The self-consistency
+tolerance of 10⁻⁸ covers it with an order of magnitude to spare, together
+with floating-point rounding (< 10⁻¹⁵): both are negligible against
+experimental uncertainty, but quantified instead of assumed.
 
 ## Privacy: nothing private gets published
 

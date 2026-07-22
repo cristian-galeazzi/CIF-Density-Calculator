@@ -32,7 +32,8 @@ pytestmark = [
 
 # IUPAC standard atomic weights (2021), g/mol - independent reference data
 IUPAC_MASS = {"Na": 22.98976928, "Cl": 35.45, "Si": 28.085, "Ce": 140.116,
-              "O": 15.999, "La": 138.90547, "Y": 88.905838, "Zr": 91.224}
+              "O": 15.999, "La": 138.90547, "Y": 88.905838, "Zr": 91.224,
+              "Gd": 157.25}
 
 NACL_A, SI_A, CEO2_A, FLUORITE_A = 5.6402, 5.43095, 5.4113, 5.24
 
@@ -237,18 +238,64 @@ def test_column_layout(batch):
     assert list(results.columns) == EXPECTED_COLUMNS
 
 
+# Formula units per cell, worked out by hand from the site multiplicities.
+# Z cancels out of every internal identity available here, so without an
+# external value nothing constrains it.
+EXPECTED_Z = {"NaCl.cif": 4, "Si.cif": 8, "CeO2_multiblock.cif": 4,
+              "CeO2_vacancies.cif": 1, "fluorite_mixed_site.cif": 1}
+
+
+@pytest.mark.parametrize("fname", EXPECTED_Z)
+def test_formula_units_per_cell(batch, fname):
+    results, _, _ = batch
+    assert row(results, fname)["Z"] == EXPECTED_Z[fname]
+
+
 @pytest.mark.parametrize("fname", EXPECTED)
-def test_molar_volume_matches_cell_mass(batch, fname):
+def test_molar_volume_unit_conversion(batch, fname):
     """V_m * rho must return the mass of one formula unit.
 
-    Independent of how V_m was derived: it ties the new column back to two
-    columns that are already validated, so a wrong Z or a unit slip in the
-    conversion cannot pass unnoticed.
+    This catches a slip in the Angstrom-to-cm or Avogadro factor. It does
+    NOT constrain Z, which cancels between the two sides; that is what
+    test_formula_units_per_cell is for.
     """
     results, _, _ = batch
     r = row(results, fname)
     assert r["Molar volume (cm^3/mol)"] * r["Density (g/cm^3)"] == pytest.approx(
         r["Cell mass (g/mol)"] / r["Z"], rel=1e-8)
+
+
+def test_trace_dopant_survives_in_cell_composition(tmp_path):
+    """A dopant too small to survive rounding must still be listed.
+
+    Deriving the composition from the rounded amounts deleted a 0.001
+    occupancy outright while its mass stayed in the density, so the row
+    contradicted itself.
+    """
+    (tmp_path / "doped.cif").write_text(CUBIC_CIF.format(
+        name="doped", a=CEO2_A, spg="F m -3 m",
+        sites="Ce1 Ce 0 0 0 0.999\nGd1 Gd 0 0 0 0.001\n"
+              "O1 O 0.25 0.25 0.25 1"))
+    results, _ = process_folder(tmp_path)
+    composition = results["Cell composition"].iloc[0]
+    assert "Gd" in composition, composition
+    # The mass carries the dopant, so the composition has to as well.
+    assert results["Cell mass (g/mol)"].iloc[0] == pytest.approx(
+        4 * (0.999 * IUPAC_MASS["Ce"] + 0.001 * IUPAC_MASS["Gd"]
+             + 2 * IUPAC_MASS["O"]), rel=2e-3)
+
+
+def test_csv_is_written_at_six_significant_figures(batch):
+    """CSV_FLOAT_FORMAT is a documented output property, so pin it.
+
+    Without this, dropping float_format entirely leaves the suite green.
+    """
+    _, _, tmp = batch
+    header, *rows = (tmp / "out.csv").read_text().splitlines()
+    volume_col = header.split(",").index("Volume (A^3)")
+    volumes = [line.split(",")[volume_col] for line in rows]
+    # 5.6402**3 = 179.42478... -> six significant figures is 179.425
+    assert "179.425" in volumes, volumes
 
 
 FORMULA_TOKEN = re.compile(r"([A-Z][a-z]?)([0-9.]*)")

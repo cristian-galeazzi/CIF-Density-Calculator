@@ -154,16 +154,22 @@ def density_record(structure: Structure, label: str = "") -> dict:
     cleaned = Composition({el: round(n, 2) for el, n in comp.get_el_amt_dict().items()})
     space_group, sg_number, crystal_system = symmetry_labels(structure)
     _, z_units = cleaned.get_reduced_composition_and_factor()
+    # z_units is 0 when every amount rounds to zero, which empties `cleaned`.
+    molar_volume = (structure.volume * ANGSTROM3_TO_CM3 * AVOGADRO / z_units
+                    if z_units else float("nan"))
     # Density leads the row: it is the result the file exists for, and the
     # descriptive columns after it are context, not competing answers.
     return {
         "File": label,
         "Density (g/cm^3)": structure.density,
         "Formula": cleaned.reduced_formula,
-        # Unreduced, so every phase is on the same "per unit cell" basis.
+        # Raw composition, not `cleaned`: rounding to 2 decimals deletes a
+        # trace dopant entirely (Gd at 0.001 per site vanishes) while its
+        # mass stays in the density, so the two columns would disagree.
+        # Unreduced, so every phase is on the same "per unit cell" basis:
         # reduced_formula renormalises per phase, which makes two phases of
         # one material look like different compounds.
-        "Cell composition": cleaned.formula,
+        "Cell composition": comp.formula,
         "Space group": space_group,
         "Space group number": sg_number,
         "Crystal system": crystal_system,
@@ -177,7 +183,7 @@ def density_record(structure: Structure, label: str = "") -> dict:
         "Z": z_units,
         "Sites per cell": len(structure),
         "Cell mass (g/mol)": float(comp.weight),
-        "Molar volume (cm^3/mol)": structure.volume * ANGSTROM3_TO_CM3 * AVOGADRO / z_units,
+        "Molar volume (cm^3/mol)": molar_volume,
     }
 
 
@@ -189,9 +195,11 @@ def process_folder(input_dir, output_csv=None) -> tuple[pd.DataFrame, pd.DataFra
     extension match is case-insensitive (.cif/.CIF) on every OS without
     producing duplicates.
 
-    The phase index in the File value is the CIF section number, so it stays
-    correct when pymatgen skips a section, and it is written whenever the
-    file holds more than one section, even if only one of them was built.
+    The phase index in the File value counts structural blocks, the ones
+    left after `select_structural_blocks`, so it stays correct when pymatgen
+    skips one. It is written whenever the file holds more than one block,
+    even if only one of them was built. A phase that fails on its own is
+    reported without costing the other phases of the same file.
     """
     input_dir = Path(input_dir)
     cif_files = sorted(
@@ -217,7 +225,12 @@ def process_folder(input_dir, output_csv=None) -> tuple[pd.DataFrame, pd.DataFra
                                         structures):
                 label = (cif_file.name if single_phase
                          else PHASE_LABEL.format(name=cif_file.name, index=index))
-                records.append(density_record(structure, label))
+                # Per phase, not per file: one unusable phase must not take
+                # the rest of a multi-phase file down with it.
+                try:
+                    records.append(density_record(structure, label))
+                except Exception as exc:
+                    failures.append({"File": label, "Error": str(exc)})
         except Exception as exc:
             failures.append({"File": cif_file.name, "Error": str(exc)})
     results = pd.DataFrame(records)
