@@ -1,59 +1,79 @@
-"""Generate example CIF structures for documentation."""
+"""Build the synthetic structures behind the README example image.
 
-from pymatgen.core import Structure, Lattice
+Writes three public-domain / invented cubic structures (NaCl, CeO2, a defect
+fluorite) as CIF files, runs the density pipeline on them, and saves the
+four display columns as a small CSV. The PNG in the README is a screenshot of
+the notebook's rendered table on these same structures; rerun this module,
+open the notebook on the generated folder, and screenshot to refresh it.
+
+No experimental data: every structure here is synthetic, matching the
+validation suite's fixtures.
+
+Run from the repository root:  python docs/make_example.py
+"""
+from __future__ import annotations
+
+import sys
+import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-def make_nacl():
-    """Rock salt NaCl structure: Fm-3m, a = 5.6402 Å."""
-    lattice = Lattice.cubic(5.6402)
-    structure = Structure(
-        lattice,
-        ["Na", "Cl"],
-        [[0, 0, 0], [0.5, 0.5, 0.5]],
-    )
-    return structure
+from cif_density import process_folder  # noqa: E402  (after sys.path setup)
+
+_CUBIC = """data_{name}
+_cell_length_a {a}
+_cell_length_b {a}
+_cell_length_c {a}
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+_symmetry_space_group_name_H-M '{spg}'
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+{sites}
+"""
+
+# (filename, a, space group, atom sites) - synthetic, no measurement.
+_STRUCTURES = [
+    ("NaCl.cif", 5.6402, "F m -3 m",
+     "Na1 Na 0 0 0 1\nCl1 Cl 0.5 0.5 0.5 1"),
+    ("CeO2.cif", 5.4113, "F m -3 m",
+     "Ce1 Ce 0 0 0 1\nO1 O 0.25 0.25 0.25 1"),
+    ("fluorite_defect.cif", 5.24, "F m -3 m",
+     "La1 La 0 0 0 0.25\nY1 Y 0 0 0 0.25\n"
+     "Zr1 Zr 0 0 0 0.5\nO1 O 0.25 0.25 0.25 0.875"),
+]
+
+_DISPLAY_COLUMNS = ["File", "Space group", "Volume (A^3)", "Density (g/cm^3)"]
 
 
-def make_ceo2():
-    """Fluorite CeO2 structure: Fm-3m, a = 5.4117 Å."""
-    lattice = Lattice.cubic(5.4117)
-    structure = Structure(
-        lattice,
-        ["Ce", "O"],
-        [[0, 0, 0], [0.25, 0.25, 0.25]],
-    )
-    return structure
+def build_example(dest: Path):
+    """Write the example display CSV to ``dest`` and return the full frame.
 
-
-def make_defect_fluorite():
-    """Defect fluorite RE2Zr2O7 (Ce2Zr2O7) structure: Fm-3m."""
-    lattice = Lattice.cubic(10.5)
-    structure = Structure(
-        lattice,
-        ["Ce", "Zr", "O"],
-        [[0, 0, 0], [0.5, 0.5, 0.5], [0.375, 0.375, 0.375]],
-    )
-    return structure
-
-
-def main():
-    """Generate example CIF files."""
-    docs_dir = Path(__file__).parent
-    cif_dir = docs_dir.parent / "cif_files"
-    cif_dir.mkdir(exist_ok=True)
-
-    structures = {
-        "nacl_example.cif": make_nacl(),
-        "ceo2_example.cif": make_ceo2(),
-        "defect_fluorite_example.cif": make_defect_fluorite(),
-    }
-
-    for filename, structure in structures.items():
-        filepath = cif_dir / filename
-        structure.to(filename=str(filepath), fmt="cif")
-        print(f"Generated {filepath}")
+    >>> import tempfile, pathlib
+    >>> frame = build_example(pathlib.Path(tempfile.mkdtemp()) / "ex.csv")
+    >>> float(round(frame.set_index("File").loc["NaCl.cif", "Density (g/cm^3)"], 3))
+    2.163
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = Path(tmp)
+        for name, a, spg, sites in _STRUCTURES:
+            (folder / name).write_text(
+                _CUBIC.format(name=name.split(".")[0], a=a, spg=spg, sites=sites))
+        results, _ = process_folder(folder)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    results[_DISPLAY_COLUMNS].to_csv(dest, index=False, float_format="%.6g")
+    return results
 
 
 if __name__ == "__main__":
-    main()
+    out = Path(__file__).resolve().parent / "example_output_display.csv"
+    frame = build_example(out)
+    print(frame[_DISPLAY_COLUMNS].to_string(index=False))
+    print(f"\nWrote {out}")

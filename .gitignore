@@ -3,6 +3,8 @@ cif_files/*
 !cif_files/.gitkeep
 *.cif
 *.csv
+# The synthetic example output is documentation, not sample data
+!docs/example_output_display.csv
 
 # Local agent notes: useful while working, not part of the published record
 CLAUDE.md
