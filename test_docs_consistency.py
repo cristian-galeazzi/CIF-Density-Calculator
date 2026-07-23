@@ -39,3 +39,16 @@ def test_citation_version_matches_engine():
     cff = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
     pattern = rf'(?m)^version:\s*["\']?{re.escape(cif_density.__version__)}\b'
     assert re.search(pattern, cff), f"CITATION.cff version != {cif_density.__version__}"
+
+
+def test_example_matches_engine():
+    """The README example must be the engine's own output, not a stale copy."""
+    import sys
+    import tempfile
+
+    sys.path.insert(0, str(DOCS))
+    from make_example import build_example  # docs/make_example.py
+
+    frame = build_example(Path(tempfile.mkdtemp()) / "ex.csv")
+    nacl = frame.set_index("File").loc["NaCl.cif", "Density (g/cm^3)"]
+    assert round(float(nacl), 3) == 2.163
