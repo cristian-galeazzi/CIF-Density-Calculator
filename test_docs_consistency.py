@@ -7,6 +7,7 @@ the code. These tests tie them back to the engine and fail if they diverge.
 import re
 from pathlib import Path
 
+import pytest
 from pymatgen.core import Lattice, Structure
 
 import cif_density
@@ -51,4 +52,6 @@ def test_example_matches_engine():
 
     frame = build_example(Path(tempfile.mkdtemp()) / "ex.csv")
     nacl = frame.set_index("File").loc["NaCl.cif", "Density (g/cm^3)"]
-    assert round(float(nacl), 3) == 2.163
+    # Relative tolerance, like the rest of the suite: pins the example to the
+    # engine without breaking on a harmless low-digit pymatgen weight update.
+    assert nacl == pytest.approx(2.1635, rel=1e-3)

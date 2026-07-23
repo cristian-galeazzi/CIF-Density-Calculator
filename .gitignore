@@ -28,8 +28,13 @@ venv/
 env/
 .env
 
-# Testing 
+# Testing
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Agent scaffolding: plans, ledgers and briefs are not part of the published
+# record (the repository is archived by version on Zenodo)
+docs/superpowers/
+.superpowers/
 

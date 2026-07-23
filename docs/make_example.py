@@ -58,8 +58,8 @@ def build_example(dest: Path):
 
     >>> import tempfile, pathlib
     >>> frame = build_example(pathlib.Path(tempfile.mkdtemp()) / "ex.csv")
-    >>> float(round(frame.set_index("File").loc["NaCl.cif", "Density (g/cm^3)"], 3))
-    2.163
+    >>> float(round(frame.set_index("File").loc["NaCl.cif", "Density (g/cm^3)"], 2))
+    2.16
     """
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
