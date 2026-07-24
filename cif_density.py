@@ -249,7 +249,7 @@ _CSS = """<style>
                   border-bottom: 2px solid rgba(128,128,128,.55); white-space: nowrap; }
 .cif-density td { padding: 6px 18px 6px 0; border-bottom: 1px solid rgba(128,128,128,.22); }
 .cif-density tr:last-child td { border-bottom: none; }
-.cif-density th:nth-child(n+3), .cif-density td:nth-child(n+3) { text-align: right; }
+.cif-density th:nth-child(n+3), .cif-density td:nth-child(n+3) { text-align: right; padding-left: 26px; }
 .cif-density caption { caption-side: bottom; text-align: left; padding-top: 8px;
                        font-size: .85em; opacity: .65; }
 </style>"""
