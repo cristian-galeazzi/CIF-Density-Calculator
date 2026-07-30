@@ -96,7 +96,7 @@ columns, rounded for reading:
 | `Cell volume (Å³)` | Unit-cell volume |
 | `Theoretical density (g/cm³)` | The result |
 
-The CSV carries all seventeen columns at 6 significant figures, including the
+The CSV carries all seventeen columns at 4 decimal places, including the
 unreduced cell composition, lattice parameters, `Z` and the cell mass. **Full
 column contract, and why the composition is not reduced:**
 [docs/output.md](docs/output.md).

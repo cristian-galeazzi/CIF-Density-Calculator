@@ -37,7 +37,7 @@ contains.
 
 ## Precision of the written numbers
 
-Numbers are written at 6 significant figures, a property of the file, not of
-the calculation: nothing is rounded before this point, and 6 figures is already
-beyond what a refined lattice parameter supports. The notebook table is
+Numbers are written at 4 decimal places, a property of the file, not of the
+calculation: nothing is rounded before this point, and four decimals are
+already beyond what a refined lattice parameter supports. The notebook table is
 narrower still, showing only file, space group, cell volume and density.

@@ -53,7 +53,11 @@ warnings.filterwarnings("ignore", message=".*No _symmetry_equiv_pos_as_xyz.*")
 
 AVOGADRO = 6.02214076e23   # mol^-1, exact (SI, 2019)
 ANGSTROM3_TO_CM3 = 1e-24
-CSV_FLOAT_FORMAT = "%.6g"  # rounding happens only at output time
+# Fixed decimals, not significant figures. The %.6g used during development
+# counted digits from the leading one, so a density of 7.2147696 was archived
+# as 7.21477 while the notebook showed 7.2148. Every quantity written here is
+# of order 1 or larger, so %.4f is never less precise than the %.6g it replaced.
+CSV_FLOAT_FORMAT = "%.4f"  # rounding happens only at output time
 
 # Multi-phase files carry the phase index inside the File value. The display
 # keeps that string intact rather than parsing it back out: two phases of one

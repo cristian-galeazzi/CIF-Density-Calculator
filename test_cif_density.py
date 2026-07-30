@@ -285,17 +285,23 @@ def test_trace_dopant_survives_in_cell_composition(tmp_path):
              + 2 * IUPAC_MASS["O"]), rel=2e-3)
 
 
-def test_csv_is_written_at_six_significant_figures(batch):
+def test_csv_is_written_at_four_decimal_places(batch):
     """CSV_FLOAT_FORMAT is a documented output property, so pin it.
 
     Without this, dropping float_format entirely leaves the suite green.
+    Decimals, not significant figures: the %.6g used until 1.4.0 gave a
+    density of 7.2147696 as 7.21477, one digit short of the notebook.
     """
     _, _, tmp = batch
     header, *rows = (tmp / "out.csv").read_text().splitlines()
     volume_col = header.split(",").index("Volume (A^3)")
+    density_col = header.split(",").index("Density (g/cm^3)")
     volumes = [line.split(",")[volume_col] for line in rows]
-    # 5.6402**3 = 179.42478... -> six significant figures is 179.425
-    assert "179.425" in volumes, volumes
+    # 5.6402**3 = 179.425180... -> four decimal places is 179.4252
+    assert "179.4252" in volumes, volumes
+    # Every density carries exactly four decimals, however large or small.
+    decimals = {len(line.split(",")[density_col].split(".")[1]) for line in rows}
+    assert decimals == {4}, decimals
 
 
 FORMULA_TOKEN = re.compile(r"([A-Z][a-z]?)([0-9.]*)")

@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cif_density import process_folder  # noqa: E402  (after sys.path setup)
+from cif_density import CSV_FLOAT_FORMAT, process_folder  # noqa: E402  (after sys.path setup)
 
 _CUBIC = """data_{name}
 _cell_length_a {a}
@@ -68,7 +68,8 @@ def build_example(dest: Path):
                 _CUBIC.format(name=name.split(".")[0], a=a, spg=spg, sites=sites))
         results, _ = process_folder(folder)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    results[_DISPLAY_COLUMNS].to_csv(dest, index=False, float_format="%.6g")
+    results[_DISPLAY_COLUMNS].to_csv(dest, index=False,
+                                     float_format=CSV_FLOAT_FORMAT)
     return results
 
 

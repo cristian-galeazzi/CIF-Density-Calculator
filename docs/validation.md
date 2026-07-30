@@ -11,7 +11,7 @@ $N_A = 6.022\,140\,76 \times 10^{23}\ \text{mol}^{-1}$ the Avogadro constant
 mixed sites) are included rigorously.
 
 Everything runs in double precision (machine epsilon ≈ 2.2 × 10⁻¹⁶), unrounded
-until the CSV is written at 6 significant figures. One exception never touches
+until the CSV is written at 4 decimal places. One exception never touches
 the density: element amounts are rounded to two decimals before `Z` is derived,
 so a site refined at 0.9998 does not produce an absurd formula; `Cell
 composition`, `Cell mass` and the density itself keep the raw amounts. A second,
