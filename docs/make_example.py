@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cif_density import CSV_FLOAT_FORMAT, process_folder  # noqa: E402  (after sys.path setup)
+from cif_density import CSV_FLOAT_FORMAT, process_folder  # after the sys.path setup
 
 _CUBIC = """data_{name}
 _cell_length_a {a}

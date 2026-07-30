@@ -55,7 +55,7 @@ nothing to install by hand. Results appear as a table under the last cell and
 are written to `density_results.csv` in the same folder, which opens in Excel or
 any spreadsheet. From a terminal, `pip install -r requirements.txt` does the
 same in one step. Tested on Python 3.11 and 3.14, with pymatgen 2026.5.4 and
-pandas 3.0.3.
+pandas 3.0.5.
 
 The notebook has three cells: setup, an optional self-check against one
 synthetic NaCl structure, and the batch run, which processes every CIF in

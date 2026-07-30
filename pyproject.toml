@@ -8,6 +8,14 @@ filterwarnings = [
 [tool.ruff]
 target-version = "py311"   # the floor requirements.txt can actually install
 
+[tool.ruff.lint]
+# Stated explicitly instead of relying on ruff's default. The default is not
+# stable across releases: 0.16 widened it, so the same unchanged repository
+# reported eleven findings under 0.16 and none under the 0.15 the CI installs.
+# This is the set the code was written against, and now a ruff upgrade cannot
+# change what is enforced without an edit here.
+select = ["E4", "E7", "E9", "F"]
+
 [tool.ruff.lint.per-file-ignores]
 # The notebook imports the engine only after the bootstrap cell has run, so
 # that a missing pymatgen can still be installed. Hoisting those imports to

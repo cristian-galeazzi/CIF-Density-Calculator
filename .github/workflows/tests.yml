@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - run: pip install ruff==0.15.17
+      - run: pip install ruff==0.16.0
       - run: ruff check .
 
   pytest:
