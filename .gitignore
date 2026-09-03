@@ -5,6 +5,14 @@ cif_files/*
 *.csv
 # The synthetic example output is documentation, not sample data
 !docs/example_output_display.csv
+# Measurement and result formats that have no place here either. None is
+# produced by this project; the rule is a guard against a file dropped next
+# to the notebook while working, not a description of the repository.
+*.xlsx
+*.xls
+*.ism
+*.dat
+*.cif.*
 
 # Local agent notes: useful while working, not part of the published record
 CLAUDE.md
