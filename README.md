@@ -3,6 +3,7 @@
 [![tests](https://github.com/cristian-galeazzi/CIF-Density-Calculator/actions/workflows/tests.yml/badge.svg)](https://github.com/cristian-galeazzi/CIF-Density-Calculator/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22287050.svg)](https://doi.org/10.5281/zenodo.22287050)
 
 Give it a folder of CIF files, the standard output of a crystal-structure
 refinement, and it returns the theoretical density of every phase inside them,
@@ -153,8 +154,10 @@ Full procedure, including automatic output stripping with nbstripout:
 ## How to cite
 
 See [`CITATION.cff`](CITATION.cff) (GitHub shows a "Cite this repository"
-button). For a permanent, versioned DOI, archive a tagged release on
-[Zenodo](https://zenodo.org).
+button). Every release is archived on Zenodo under
+[10.5281/zenodo.22287050](https://doi.org/10.5281/zenodo.22287050), the DOI
+that always resolves to the newest version. Cite that one unless you need to
+pin the exact version you ran, which carries a DOI of its own.
 
 Please also cite the libraries this notebook relies on:
 
